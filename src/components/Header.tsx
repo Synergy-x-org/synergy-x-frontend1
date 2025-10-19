@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom"; // Import Link
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
@@ -33,7 +34,9 @@ const Header = () => {
 
           {/* CTA Button Desktop */}
           <div className="hidden md:block">
-            <Button className="bg-primary hover:bg-primary/90">Get Started</Button>
+            <Link to="/login"> {/* Wrap Button with Link */}
+              <Button className="bg-primary hover:bg-primary/90">Get Started</Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -78,7 +81,9 @@ const Header = () => {
               >
                 Contact Us
               </a>
-              <Button className="bg-primary hover:bg-primary/90 mt-2">Get Started</Button>
+              <Link to="/login"> {/* Wrap Button with Link */}
+                <Button className="bg-primary hover:bg-primary/90 mt-2">Get Started</Button>
+              </Link>
             </nav>
           </div>
         )}
