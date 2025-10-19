@@ -9,8 +9,7 @@ const Footer = () => {
           {/* Company Info */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src={logo} alt="AutoShip Pro" className="h-10 w-10 brightness-0 invert" />
-              <span className="text-xl font-bold">AutoShip Pro</span>
+              <span className="text-xl font-bold">Synergy X</span>
             </div>
             <p className="text-background/80 mb-4">
               Reliable auto transport services across the United States. Fast, secure, and affordable.
@@ -26,7 +25,7 @@ const Footer = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                <span>info@autoship-pro.com</span>
+                <span>admin@synergyxtransportaion.com</span>
               </div>
             </div>
           </div>
@@ -101,27 +100,22 @@ const Footer = () => {
             <ul className="space-y-2 text-background/80">
               <li>
                 <a href="#" className="hover:text-primary transition-colors">
-                  Individuals
+                  Auto Auctions
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-primary transition-colors">
-                  Dealerships
+                  Car Relocation Services 
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-primary transition-colors">
-                  Corporate Fleets
+                  Military members
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-primary transition-colors">
-                  Military Personnel
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-primary transition-colors">
-                  Snowbirds
+                  Online Car Seller
                 </a>
               </li>
             </ul>
@@ -130,7 +124,7 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-background/20 text-center text-background/60">
-          <p>© 2024 AutoShip Pro. All rights reserved.</p>
+          <p>© 2024 Synergy X. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -30,19 +30,7 @@ const faqs = [
 
 const HaveQuestions = () => {
   return (
-    <section className="py-20 relative overflow-hidden">
-      {/* Map Background */}
-      <div 
-        className="absolute top-0 left-0 right-0 h-64 bg-cover bg-center"
-        style={{
-          backgroundImage: 'url(/placeholder-map.jpg)', // Replace with actual map image
-          filter: 'brightness(0.9)',
-        }}
-      >
-        {/* Placeholder gradient when no map image */}
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-100 to-blue-50"></div>
-      </div>
-
+    // <section className="py-20 relative overflow-hidden">
       <div className="container mx-auto px-4 relative z-10 pt-32">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -69,7 +57,7 @@ const HaveQuestions = () => {
           </Accordion>
         </div>
       </div>
-    </section>
+    // </section>
   );
 };
 

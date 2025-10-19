@@ -1,41 +1,48 @@
 import { Truck, MapPin, Building, Shield, Zap, Package } from "lucide-react";
 
+import openTransportImage from "@/assets/placeholder-open-transport.png";
+import doorToDoorImage from "@/assets/placeholder-door-to-door.png";
+import corporateImage from "@/assets/placeholder-corporate.png";
+import enclosedImage from "@/assets/placeholder-enclosed.png";
+import expeditedImage from "@/assets/placeholder-expedited.png";
+import expedited2Image from "@/assets/placeholder-expedited2.png";
+
 const services = [
   {
     icon: Truck,
     title: "Open Auto Transport",
     description: "The most affordable option for standard cars, using open-air trailers to transport multiple vehicles.",
-    image: "/placeholder-open-transport.jpg", // Replace with actual image
+    image: openTransportImage,
   },
   {
     icon: MapPin,
     title: "Door-to-Door Auto Transport",
     description: "We pick up your vehicle at your home and deliver it directly to your new address.",
-    image: "/placeholder-door-to-door.jpg", // Replace with actual image
+    image: doorToDoorImage,
   },
   {
     icon: Building,
     title: "Corporate & Fleet Transport",
     description: "Businesses trust us to handle their fleet, ensuring timely and secure deliveries for employees, clients.",
-    image: "/placeholder-corporate.jpg", // Replace with actual image
+    image: corporateImage,
   },
   {
     icon: Shield,
     title: "Enclosed Auto Transport",
     description: "For added protection, we offer enclosed transport, ideal for high-end or classic cars.",
-    image: "/placeholder-enclosed.jpg", // Replace with actual image
+    image: enclosedImage,
   },
   {
     icon: Zap,
     title: "Expedited Shipping",
     description: "Need your car delivered faster? We offer expedited options to meet your time frame.",
-    image: "/placeholder-expedited.jpg", // Replace with actual image
+    image: expeditedImage,
   },
   {
     icon: Zap,
     title: "Expedited Shipping",
     description: "Need your car delivered faster? We offer expedited options to meet your time frame.",
-    image: "/placeholder-expedited2.jpg", // Replace with actual image
+    image: expedited2Image,
   },
 ];
 
@@ -53,10 +60,13 @@ const ServicesWeOffer = () => {
               key={index}
               className="bg-card rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
             >
-              {/* Service Image Placeholder */}
-              <div className="h-64 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <service.icon className="h-24 w-24 text-primary/40" />
-                {/* Replace this placeholder with actual images */}
+              {/* Service Image */}
+              <div className="h-64 overflow-hidden">
+                <img 
+                  src={service.image} 
+                  alt={service.title} 
+                  className="w-full h-full object-cover" 
+                />
               </div>
               
               <div className="p-6">
