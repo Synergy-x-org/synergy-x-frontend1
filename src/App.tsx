@@ -10,6 +10,15 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ConfirmEmail from "./pages/ConfirmEmail";
 import ResetPassword from "./pages/ResetPassword";
 import ShippingQuote from "./pages/ShippingQuote";
+import DoorToDoorShipping from "./pages/DoorToDoorShipping";
+import MotorcycleShipping from "./pages/MotorcycleShipping";
+import CarToAnotherState from "./pages/CarToAnotherState";
+import ClassicCarShipping from "./pages/ClassicCarShipping";
+import CrossCountryCarShipping from "./pages/CrossCountryCarShipping";
+import Contact from "./pages/Contact";
+import Individuals from "./pages/Individuals";
+import Businesses from "./pages/Businesses";
+import Military from "./pages/Military";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +37,13 @@ const App = () => (
           <Route path="/confirm-email" element={<ConfirmEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/shipping-quote" element={<ShippingQuote />} />
+          <Route path="/door-to-door" element={<DoorToDoorShipping />} />
+          <Route path="/motorcycle-shipping" element={<MotorcycleShipping />} />
+          <Route path="/car-to-another-state" element={<CarToAnotherState />} />
+          <Route path="/classic-car-shipping" element={<ClassicCarShipping />} />
+          <Route path="/cross-country-car-shipping" element={<CrossCountryCarShipping />} />
+          <Route path="/contact" element={<Contact />} />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
