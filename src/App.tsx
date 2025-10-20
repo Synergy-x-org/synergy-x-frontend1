@@ -16,9 +16,8 @@ import CarToAnotherState from "./pages/CarToAnotherState";
 import ClassicCarShipping from "./pages/ClassicCarShipping";
 import CrossCountryCarShipping from "./pages/CrossCountryCarShipping";
 import Contact from "./pages/Contact";
-import Individuals from "./pages/Individuals";
-import Businesses from "./pages/Businesses";
-import Military from "./pages/Military";
+import QuoteResult from "./pages/QuoteResult";
+import MovingCostCalculator from "./pages/MovingCostCalculator"; // Import MovingCostCalculator
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,7 +41,9 @@ const App = () => (
           <Route path="/car-to-another-state" element={<CarToAnotherState />} />
           <Route path="/classic-car-shipping" element={<ClassicCarShipping />} />
           <Route path="/cross-country-car-shipping" element={<CrossCountryCarShipping />} />
+          <Route path="/quote-result" element={<QuoteResult />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/moving-cost-calculator" element={<MovingCostCalculator />} /> {/* Add new route */}
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

@@ -57,17 +57,25 @@ const QuoteForm = () => {
           </SelectContent>
         </Select>
 
-        <Input
-          placeholder="Car Model"
-          value={formData.model}
-          onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-        />
+        <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Car Model (from backend)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="model1">Model 1</SelectItem>
+            <SelectItem value="model2">Model 2</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <Input
-          placeholder="Maker"
-          value={formData.make}
-          onChange={(e) => setFormData({ ...formData, make: e.target.value })}
-        />
+        <Select value={formData.make} onValueChange={(value) => setFormData({ ...formData, make: value })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Maker (from backend)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="make1">Make 1</SelectItem>
+            <SelectItem value="make2">Make 2</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Input
           type="date"

@@ -18,9 +18,9 @@ const Header = () => {
       <div className="bg-background border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-end h-10 gap-6 text-xs">
-            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/moving-cost-calculator" className="text-muted-foreground hover:text-foreground transition-colors">
               Moving cost calculator
-            </a>
+            </Link>
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
               Cost shipping calculator
             </a>
@@ -73,15 +73,9 @@ const Header = () => {
                 Who We Serve <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem asChild>
-                  <Link to="/who-we-serve/individuals">Individuals</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/who-we-serve/businesses">Businesses</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/who-we-serve/military">Military</Link>
-                </DropdownMenuItem>
+                <DropdownMenuItem>Individuals</DropdownMenuItem>
+                <DropdownMenuItem>Businesses</DropdownMenuItem>
+                <DropdownMenuItem>Military</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <a href="#why-choose-us" className="text-sm font-medium hover:text-primary transition-colors">
@@ -113,9 +107,9 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 animate-fade-in">
             <nav className="flex flex-col gap-4">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1">
+              <Link to="/moving-cost-calculator" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
                   Moving cost calculator
-                </a>
+                </Link>
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1">
                   Cost shipping calculator
                 </a>
@@ -161,15 +155,9 @@ const Header = () => {
                   Who We Serve <ChevronDown className="h-4 w-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem asChild>
-                    <Link to="/who-we-serve/individuals" onClick={() => setIsMenuOpen(false)}>Individuals</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/who-we-serve/businesses" onClick={() => setIsMenuOpen(false)}>Businesses</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/who-we-serve/military" onClick={() => setIsMenuOpen(false)}>Military</Link>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsMenuOpen(false)}>Individuals</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsMenuOpen(false)}>Businesses</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsMenuOpen(false)}>Military</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <a

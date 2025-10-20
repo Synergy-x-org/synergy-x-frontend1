@@ -34,6 +34,7 @@ const Contact = () => {
 
         {/* Get In Touch Section */}
         <GetInTouch />
+        <Testimonials />
       </main>
       
       <Footer />

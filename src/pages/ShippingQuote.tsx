@@ -266,32 +266,40 @@ const ShippingQuote = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="carModel">Car Model</Label>
-                  <Input
-                    id="carModel"
-                    type="text"
-                    placeholder="Enter car model"
+                  <Select
                     value={formData.carModel}
-                    onChange={(e) =>
-                      setFormData({ ...formData, carModel: e.target.value })
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, carModel: value })
                     }
-                    required
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select car model (from backend)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="model1">Model 1</SelectItem>
+                      <SelectItem value="model2">Model 2</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="maker">Maker</Label>
-                  <Input
-                    id="maker"
-                    type="text"
-                    placeholder="Enter car maker"
+                  <Select
                     value={formData.maker}
-                    onChange={(e) =>
-                      setFormData({ ...formData, maker: e.target.value })
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, maker: value })
                     }
-                    required
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select maker (from backend)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="make1">Make 1</SelectItem>
+                      <SelectItem value="make2">Make 2</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
