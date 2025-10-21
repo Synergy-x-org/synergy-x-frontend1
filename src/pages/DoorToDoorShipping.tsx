@@ -9,6 +9,9 @@ import { CheckCircle, DollarSign, ShieldCheck } from 'lucide-react';
 // Placeholder images
 import doorToDoorHero from "@/assets/hero1.jpg"; // Using existing hero image as placeholder
 import doorToDoorContent from "@/assets/hero2.jpg"; // Using existing hero image as placeholder
+import Testimonials from '@/components/Testimonials';
+import Footer from '@/components/Footer';
+import ReadyToShip from '@/components/ReadyToShip'; // Import ReadyToShip component
 
 const DoorToDoorShipping = () => {
   return (
@@ -144,25 +147,12 @@ const DoorToDoorShipping = () => {
       </section>
 
       {/* Ready To Ship Your Vehicle? */}
-      <section className="py-20 bg-primary text-white text-center">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready To Ship Your Vehicle?</h2>
-          <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto">
-            Get your vehicle delivered safely, on time, and at the best price.
-          </p>
-          <Link to="/login">
-            <Button size="lg" className="bg-white text-primary hover:bg-gray-100">Get a free shipping quote now!</Button>
-          </Link>
-        </div>
-      </section>
+      <ReadyToShip />
 
       {/* What our customers are saying (Testimonials) */}
       <section className="py-20 bg-background">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-12">What our customers are saying</h2>
-          {/* Placeholder for testimonials - will use existing Testimonials component if available */}
-          <p className="text-muted-foreground">Testimonials section placeholder.</p>
-        </div>
+        <Testimonials />
+        <Footer />
       </section>
     </div>
   );

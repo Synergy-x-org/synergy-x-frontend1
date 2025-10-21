@@ -1,30 +1,25 @@
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { Button } from "./ui/button";
 
+import readyToShipBg from "@/assets/hero1.jpg"; // Using existing hero image as placeholder
+
 const ReadyToShip = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const handleGetQuote = () => {
-    // Scroll to quote form or open modal
-    const quoteSection = document.getElementById('quote-form');
-    if (quoteSection) {
-      quoteSection.scrollIntoView({ behavior: 'smooth' });
-    }
+    navigate('/login'); // Navigate to login page
   };
 
   return (
     <section className="relative py-32 overflow-hidden">
-      {/* Background Image with Overlay */}
+      {/* Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: 'url(/placeholder-ready-to-ship.jpg)', // Replace with actual image
-          filter: 'brightness(0.4)',
+          backgroundImage: `url(${readyToShipBg})`, // Use imported image
         }}
       >
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/40"></div>
       </div>
-
-      {/* Placeholder background when no image */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 -z-10"></div>
 
       {/* Content */}
       <div className="container mx-auto px-4 relative z-10">
@@ -37,7 +32,7 @@ const ReadyToShip = () => {
           </p>
           <Button 
             size="lg" 
-            onClick={handleGetQuote}
+            onClick={handleGetQuote} // Use onClick for navigation
             className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg"
           >
             Get a free shipping quote now!
