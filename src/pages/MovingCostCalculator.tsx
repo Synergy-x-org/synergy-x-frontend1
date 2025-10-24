@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 
 import movingCostHero from "@/assets/movingcost.png"; // Import the image from assets
+import Testimonials from '@/components/Testimonials';
+import Footer from '@/components/Footer';
 
 const MovingCostCalculator = () => {
   return (
@@ -175,11 +177,8 @@ const MovingCostCalculator = () => {
 
       {/* What our customers are saying (Testimonials) */}
       <section className="py-20 bg-secondary/10">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-12">What our customers are saying</h2>
-          {/* Placeholder for testimonials - will use existing Testimonials component if available */}
-          <p className="text-muted-foreground">Testimonials section placeholder.</p>
-        </div>
+        <Testimonials />
+        <Footer />
       </section>
     </div>
   );

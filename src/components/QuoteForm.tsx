@@ -59,7 +59,7 @@ const QuoteForm = () => {
 
         <Select value={formData.model} onValueChange={(value) => setFormData({ ...formData, model: value })}>
           <SelectTrigger>
-            <SelectValue placeholder="Car Model (from backend)" />
+            <SelectValue placeholder="Car Model" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="model1">Model 1</SelectItem>
@@ -69,7 +69,7 @@ const QuoteForm = () => {
 
         <Select value={formData.make} onValueChange={(value) => setFormData({ ...formData, make: value })}>
           <SelectTrigger>
-            <SelectValue placeholder="Maker (from backend)" />
+            <SelectValue placeholder="Maker" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="make1">Make 1</SelectItem>
