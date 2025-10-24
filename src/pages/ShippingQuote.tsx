@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 import { ChevronDown, Menu, X } from "lucide-react";
+import { carBrandsAPI, quotesAPI } from "@/services/api"; // Import APIs
 
 const ShippingQuote = () => {
   const navigate = useNavigate();
@@ -14,13 +15,17 @@ const ShippingQuote = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState({ firstname: "John", lastname: "Doe" }); // Mock user data
+  const [carBrands, setCarBrands] = useState<string[]>([]);
+  const [carModels, setCarModels] = useState<Record<string, number[]>>({});
   const [formData, setFormData] = useState({
-    location: "",
-    destination: "",
+    pickupLocation: "", // Renamed from 'location'
+    deliveryLocation: "", // Renamed from 'destination'
     year: "",
-    carModel: "",
-    maker: "",
-    shipYear: "",
+    brand: "", // Renamed from 'maker'
+    model: "", // Renamed from 'carModel'
+    pickupDate: "", // Renamed from 'shipYear'
+    email: "", // Added email
+    phoneNumber: "", // Added phoneNumber
   });
 
   // Check if user is logged in (mock check)
@@ -32,24 +37,58 @@ const ShippingQuote = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    const fetchCarBrands = async () => {
+      try {
+        const brands = await carBrandsAPI.getAllCarBrands();
+        setCarBrands(brands);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch car brands",
+          variant: "destructive",
+        });
+      }
+    };
+    fetchCarBrands();
+  }, []);
+
+  useEffect(() => {
+    const fetchCarModels = async () => {
+      if (formData.brand) {
+        try {
+          const models = await carBrandsAPI.getModelsByBrand(formData.brand);
+          setCarModels(models);
+          setFormData((prev) => ({ ...prev, model: "", year: "" })); // Reset model and year when brand changes
+        } catch (error: any) {
+          toast({
+            title: "Error",
+            description: error.message || `Failed to fetch models for ${formData.brand}`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        setCarModels({});
+        setFormData((prev) => ({ ...prev, model: "", year: "" }));
+      }
+    };
+    fetchCarModels();
+  }, [formData.brand]);
+
   const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // TODO: Replace demo endpoint with real Java backend endpoint
-      const response = await fetch("https://example.com/api/demo-calculate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      const response = await quotesAPI.calculateVisitorQuote({
+        ...formData,
+        year: parseInt(formData.year), // Ensure year is a number
       });
-
       toast({
-        title: "Quote Calculated!",
-        description: "Your estimated quote will appear here.",
+        title: "Success!",
+        description: "Quote calculated successfully.",
       });
+      navigate("/quote-result", { state: { quote: response } });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -60,9 +99,6 @@ const ShippingQuote = () => {
       setLoading(false);
     }
   };
-
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 50 }, (_, i) => currentYear - i);
 
   return (
     <div className="min-h-screen bg-secondary/30">
@@ -214,31 +250,76 @@ const ShippingQuote = () => {
             <form onSubmit={handleCalculate} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="pickupLocation">Pickup Location</Label>
                   <Input
-                    id="location"
+                    id="pickupLocation"
                     type="text"
                     placeholder="Enter pickup location"
-                    value={formData.location}
+                    value={formData.pickupLocation}
                     onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
+                      setFormData({ ...formData, pickupLocation: e.target.value })
                     }
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="destination">Destination</Label>
+                  <Label htmlFor="deliveryLocation">Delivery Location</Label>
                   <Input
-                    id="destination"
+                    id="deliveryLocation"
                     type="text"
-                    placeholder="Enter destination"
-                    value={formData.destination}
+                    placeholder="Enter delivery location"
+                    value={formData.deliveryLocation}
                     onChange={(e) =>
-                      setFormData({ ...formData, destination: e.target.value })
+                      setFormData({ ...formData, deliveryLocation: e.target.value })
                     }
                     required
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="brand">Car Brand</Label>
+                  <Select
+                    value={formData.brand}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, brand: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select car brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {carBrands.map((brand) => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="model">Car Model</Label>
+                  <Select
+                    value={formData.model}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, model: value })
+                    }
+                    disabled={!formData.brand}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select car model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(carModels).map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -250,12 +331,13 @@ const ShippingQuote = () => {
                     onValueChange={(value) =>
                       setFormData({ ...formData, year: value })
                     }
+                    disabled={!formData.model}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select year" />
                     </SelectTrigger>
                     <SelectContent>
-                      {years.map((year) => (
+                      {formData.model && carModels[formData.model]?.map((year) => (
                         <SelectItem key={year} value={year.toString()}>
                           {year}
                         </SelectItem>
@@ -265,61 +347,41 @@ const ShippingQuote = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="carModel">Car Model</Label>
-                  <Select
-                    value={formData.carModel}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, carModel: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select car model (from backend)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="model1">Model 1</SelectItem>
-                      <SelectItem value="model2">Model 2</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="pickupDate">Pickup Date</Label>
+                  <Input
+                    id="pickupDate"
+                    type="date"
+                    placeholder="mm/dd/yyyy"
+                    value={formData.pickupDate}
+                    onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
+                    required
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="maker">Maker</Label>
-                  <Select
-                    value={formData.maker}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, maker: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select maker (from backend)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="make1">Make 1</SelectItem>
-                      <SelectItem value="make2">Make 2</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="shipYear">Ship Date</Label>
-                  <Select
-                    value={formData.shipYear}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, shipYear: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select ship date" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="immediate">Immediate</SelectItem>
-                      <SelectItem value="1-week">Within 1 week</SelectItem>
-                      <SelectItem value="2-weeks">Within 2 weeks</SelectItem>
-                      <SelectItem value="1-month">Within 1 month</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    required
+                  />
                 </div>
               </div>
 

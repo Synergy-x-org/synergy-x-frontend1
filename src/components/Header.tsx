@@ -21,9 +21,9 @@ const Header = () => {
             <Link to="/moving-cost-calculator" className="text-muted-foreground hover:text-foreground transition-colors">
               Moving cost calculator
             </Link>
-            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/shipping-quote" className="text-muted-foreground hover:text-foreground transition-colors">
               Cost shipping calculator
-            </a>
+            </Link>
             {/* <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
               Teams
             </a> */}
@@ -88,7 +88,7 @@ const Header = () => {
 
           {/* CTA Button Desktop */}
           <div className="hidden md:block">
-            <Link to="/login"> {/* Wrap Button with Link */}
+            <Link to="/shipping-quote"> {/* Wrap Button with Link */}
               <Button className="bg-primary hover:bg-primary/90">Get Started</Button>
             </Link>
           </div>
@@ -174,7 +174,7 @@ const Header = () => {
               >
                 Contact Us
               </Link>
-              <Link to="/login"> {/* Wrap Button with Link */}
+              <Link to="/shipping-quote"> {/* Wrap Button with Link */}
                 <Button className="bg-primary hover:bg-primary/90 mt-2">Get Started</Button>
               </Link>
             </nav>

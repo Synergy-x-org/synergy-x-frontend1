@@ -14,7 +14,7 @@ const Signup = () => {
     firstName: "",
     lastName: "",
     email: "",
-    phone: "",
+    phoneNumber: "", // Changed from 'phone' to 'phoneNumber'
     password: "",
   });
 
@@ -23,7 +23,8 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      await authAPI.register(formData);
+      const dataToRegister = { ...formData, role: "USER" as const }; // Add role
+      await authAPI.register(dataToRegister);
       toast({
         title: "Success!",
         description: "Account created successfully. Please check your email.",
@@ -102,14 +103,14 @@ const Signup = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phoneNumber">Phone Number</Label>
               <Input
-                id="phone"
+                id="phoneNumber"
                 type="tel"
                 placeholder="+1 (555) 000-0000"
-                value={formData.phone}
+                value={formData.phoneNumber}
                 onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
+                  setFormData({ ...formData, phoneNumber: e.target.value })
                 }
                 required
               />

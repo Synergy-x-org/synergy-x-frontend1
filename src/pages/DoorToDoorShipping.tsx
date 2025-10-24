@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // Import useState and useEffect
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, DollarSign, ShieldCheck } from 'lucide-react';
+import { carBrandsAPI } from '@/services/api'; // Import carBrandsAPI
 
 // Placeholder images
 import doorToDoorHero from "@/assets/hero1.jpg"; // Using existing hero image as placeholder
@@ -14,6 +15,53 @@ import Footer from '@/components/Footer';
 import ReadyToShip from '@/components/ReadyToShip'; // Import ReadyToShip component
 
 const DoorToDoorShipping = () => {
+  const [brands, setBrands] = useState<string[]>([]);
+  const [models, setModels] = useState<Record<string, number[]>>({});
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  // Fetch car brands on component mount
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const fetchedBrands = await carBrandsAPI.getAllCarBrands();
+        setBrands(fetchedBrands);
+      } catch (error) {
+        console.error("Failed to fetch car brands:", error);
+        // Optionally show a toast error
+      }
+    };
+    fetchBrands();
+  }, []);
+
+  // Fetch models when brand changes
+  useEffect(() => {
+    if (selectedBrand) {
+      const fetchModels = async () => {
+        try {
+          const fetchedModels = await carBrandsAPI.getModelsByBrand(selectedBrand);
+          setModels(fetchedModels);
+          setSelectedModel(''); // Reset model when brand changes
+          setAvailableYears([]); // Reset years
+        } catch (error) {
+          console.error(`Failed to fetch models for brand ${selectedBrand}:`, error);
+          // Optionally show a toast error
+        }
+      };
+      fetchModels();
+    }
+  }, [selectedBrand]);
+
+  // Update available years when model changes
+  useEffect(() => {
+    if (selectedModel && models[selectedModel]) {
+      setAvailableYears(models[selectedModel]);
+    } else {
+      setAvailableYears([]);
+    }
+  }, [selectedModel, models]);
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -51,24 +99,46 @@ const DoorToDoorShipping = () => {
                   <Input id="destination" type="text" placeholder="Enter delivery destination" />
                 </div>
                 <div>
-                  <label htmlFor="car-model" className="block text-sm font-medium text-gray-700">Car Model</label>
-                  <select id="car-model" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
-                    <option value="">Select Car Model (from backend)</option>
-                    <option value="model1">Model 1</option>
-                    <option value="model2">Model 2</option>
+                  <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Brand</label>
+                  <select 
+                    id="brand" 
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+                    value={selectedBrand}
+                    onChange={(e) => setSelectedBrand(e.target.value)}
+                  >
+                    <option value="">Select Brand</option>
+                    {brands.map((brand) => (
+                      <option key={brand} value={brand}>{brand}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Brand</label>
-                  <select id="brand" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
-                    <option value="">Select Brand (from backend)</option>
-                    <option value="brand1">Brand 1</option>
-                    <option value="brand2">Brand 2</option>
+                  <label htmlFor="car-model" className="block text-sm font-medium text-gray-700">Car Model</label>
+                  <select 
+                    id="car-model" 
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    disabled={!selectedBrand}
+                  >
+                    <option value="">Select Car Model</option>
+                    {Object.keys(models).map((model) => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label htmlFor="year" className="block text-sm font-medium text-gray-700">Year</label>
-                  <Input id="year" type="number" placeholder="e.g., 2020" />
+                  <select 
+                    id="year" 
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+                    disabled={!selectedModel}
+                  >
+                    <option value="">Select Year</option>
+                    {availableYears.map((year) => (
+                      <option key={year} value={year.toString()}>{year}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label htmlFor="ship-date" className="block text-sm font-medium text-gray-700">Ship Date</label>

@@ -5,18 +5,14 @@ import { MapPin, X } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingState from "@/components/LoadingState";
+import { QuoteVisitorResponse } from "@/services/api"; // Import QuoteVisitorResponse
+import { mapAPI, MapResponse } from "@/services/mapApi"; // Import mapAPI and MapResponse
+import { toast } from "@/hooks/use-toast";
 
-// ✅ New File: src/pages/QuoteResult.tsx - Quote result page with pricing and map
-
-interface QuoteData {
-  quoteId: string;
-  pickupFrom: string;
-  deliverTo: string;
-  carModel: string;
-  finalPrice: number;
-  downPayment: number;
-  codDelivery: number;
-  distanceInMiles: number;
+interface QuoteData extends QuoteVisitorResponse {
+  distance: string;
+  duration: string;
+  mapImageUrl: string;
 }
 
 const QuoteResult = () => {
@@ -28,51 +24,59 @@ const QuoteResult = () => {
 
   useEffect(() => {
     // Check if user is logged in
-    const userData = localStorage.getItem("user");
-    setIsLoggedIn(!!userData);
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
 
-    // Simulate API call to fetch quote data
-    const fetchQuoteData = async () => {
+    const fetchResults = async () => {
       setIsLoading(true);
-      
-      // Get data from navigation state or create mock data
-      const formData = location.state?.formData;
-      
+      const quoteResponse: QuoteVisitorResponse | undefined = location.state?.quote;
+
+      if (!quoteResponse) {
+        toast({
+          title: "Error",
+          description: "No quote data found. Please calculate a new quote.",
+          variant: "destructive",
+        });
+        navigate("/"); // Redirect to home or quote form
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        // TODO: Replace with real Java backend endpoint
-        // const response = await fetch("https://api.synergyx.com/calculate-quote", {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify(formData)
-        // });
-        // const data = await response.json();
-        
-        // Mock data for now
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
-        
-        const mockData: QuoteData = {
-          quoteId: `#${Math.floor(1000000 + Math.random() * 9000000)}`,
-          pickupFrom: formData?.location || "Texas",
-          deliverTo: formData?.destination || "New York",
-          carModel: formData?.carModel && formData?.maker 
-            ? `${formData.maker} ${formData.carModel} ${formData.year || ""}`
-            : "Honda Ford 2021",
-          finalPrice: 1200,
-          downPayment: 600,
-          codDelivery: 600,
-          distanceInMiles: 1845
+        const mapResponse: MapResponse = await mapAPI.getRouteAndDistance({
+          origin: quoteResponse.pickupLocation,
+          destination: quoteResponse.deliveryLocation,
+        });
+
+        const fullQuoteData: QuoteData = {
+          ...quoteResponse,
+          distance: mapResponse.distance,
+          duration: mapResponse.duration,
+          mapImageUrl: mapResponse.mapImageUrl,
         };
         
-        setQuoteData(mockData);
-      } catch (error) {
-        console.error("Error fetching quote:", error);
+        setQuoteData(fullQuoteData);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch map data",
+          variant: "destructive",
+        });
+        console.error("Error fetching map data:", error);
+        // Even if map fails, display quote data if available
+        setQuoteData({
+          ...quoteResponse,
+          distance: "N/A",
+          duration: "N/A",
+          mapImageUrl: "https://via.placeholder.com/600x400?text=Map+Unavailable", // Placeholder image
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchQuoteData();
-  }, [location.state]);
+    fetchResults();
+  }, [location.state, navigate]);
 
   const handleGetStarted = () => {
     if (!isLoggedIn) {
@@ -119,22 +123,26 @@ const QuoteResult = () => {
             <div className="space-y-6">
               {/* Quote Header */}
               <div className="bg-primary text-white p-6 rounded-lg shadow-lg">
-                <h1 className="text-2xl font-bold">Quote {quoteData.quoteId}</h1>
+                <h1 className="text-2xl font-bold">Quote {quoteData.quoteReference}</h1>
               </div>
 
               {/* Pickup and Delivery Info */}
               <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-medium">Pickup from</span>
-                  <span className="font-semibold">{quoteData.pickupFrom}</span>
+                  <span className="font-semibold">{quoteData.pickupLocation}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground font-medium">Deliver to</span>
-                  <span className="font-semibold">{quoteData.deliverTo}</span>
+                  <span className="text-muted-foreground font-medium">Delivered to</span>
+                  <span className="font-semibold">{quoteData.deliveryLocation}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-medium">Car Model</span>
-                  <span className="font-semibold">{quoteData.carModel}</span>
+                  <span className="font-semibold">{`${quoteData.vehicle.brand} ${quoteData.vehicle.model} ${quoteData.vehicle.year}`}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground font-medium">Delivery Date</span>
+                  <span className="font-semibold">{quoteData.deliveryDate}</span>
                 </div>
               </div>
 
@@ -148,7 +156,7 @@ const QuoteResult = () => {
                   <div className="flex justify-between items-start mb-6">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Final price</p>
-                      <p className="text-4xl font-bold text-primary">${quoteData.finalPrice}</p>
+                      <p className="text-4xl font-bold text-primary">${quoteData.price}</p>
                       
                       <div className="mt-4 space-y-2">
                         <div>
@@ -157,8 +165,8 @@ const QuoteResult = () => {
                         </div>
                         
                         <div>
-                          <p className="text-sm text-muted-foreground">COD on Delivery</p>
-                          <p className="text-2xl font-bold text-primary">${quoteData.codDelivery}</p>
+                          <p className="text-sm text-muted-foreground">Balance on Delivery</p>
+                          <p className="text-2xl font-bold text-primary">${quoteData.balanceOnDelivery}</p>
                         </div>
                       </div>
                     </div>
@@ -215,29 +223,31 @@ const QuoteResult = () => {
               {/* Route Header */}
               <div className="flex items-center justify-center gap-4 text-lg font-semibold">
                 <span className="bg-primary text-white px-4 py-2 rounded-lg">
-                  {quoteData.pickupFrom}
+                  {quoteData.pickupLocation}
                 </span>
                 <div className="flex-1 border-t-2 border-dashed border-muted-foreground max-w-[200px]" />
                 <MapPin className="text-primary" />
-                <span className="text-muted-foreground">{quoteData.distanceInMiles} Mi</span>
+                <span className="text-muted-foreground">{quoteData.distance}</span> {/* Display distance from map API */}
                 <MapPin className="text-primary" />
                 <div className="flex-1 border-t-2 border-dashed border-muted-foreground max-w-[200px]" />
                 <span className="bg-primary text-white px-4 py-2 rounded-lg">
-                  {quoteData.deliverTo}
+                  {quoteData.deliveryLocation}
                 </span>
               </div>
 
               {/* Map Container */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
                 <div className="aspect-square w-full bg-muted flex items-center justify-center">
-                  {/* TODO: Integrate with map service https://synagyx.vercel.app/ */}
-                  {/* Replace with actual map image from backend */}
-                  <iframe
-                    src={`https://synagyx.vercel.app/?origin=${encodeURIComponent(quoteData.pickupFrom)}&destination=${encodeURIComponent(quoteData.deliverTo)}`}
-                    className="w-full h-full"
-                    title="Route Map"
+                  <img
+                    src={quoteData.mapImageUrl}
+                    alt="Route Map"
+                    className="w-full h-full object-cover"
                     style={{ minHeight: "500px" }}
                   />
+                </div>
+                {/* Distance overlay */}
+                <div className="absolute top-4 right-4 bg-white text-foreground px-3 py-1 rounded-md shadow-sm text-sm font-medium">
+                  Distance: {quoteData.distance}
                 </div>
               </div>
 

@@ -10,8 +10,7 @@ import logo from "@/assets/logo.png";
 const ResetPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || "";
-  const code = location.state?.code || "";
+  const token = location.state?.token || ""; // Changed from code to token
   
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -43,21 +42,20 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      await authAPI.resetPassword({
-        email,
-        code,
+      const response = await authAPI.resetPassword({
+        token, // Pass token
         newPassword: formData.newPassword,
         confirmPassword: formData.confirmPassword,
       });
       toast({
         title: "Success!",
-        description: "Password reset successfully. Please login with your new password.",
+        description: response.message, // Use message from API response
       });
       navigate("/login");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to reset password",
+        description: error.message || "Password reset failed",
         variant: "destructive",
       });
     } finally {

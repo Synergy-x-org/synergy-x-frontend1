@@ -22,21 +22,21 @@ const ConfirmEmail = () => {
     setLoading(true);
 
     try {
-      await authAPI.verifyCode({ email, code });
+      const response = await authAPI.otpConfirmation(code); // Call new OTP confirmation API
       toast({
         title: "Success!",
-        description: "Code verified successfully.",
+        description: response.message, // Use message from API response
       });
       
       if (fromForgotPassword) {
-        navigate("/reset-password", { state: { email, code } });
+        navigate("/reset-password", { state: { token: code } }); // Pass code as token
       } else {
         navigate("/login");
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Invalid verification code",
+        description: error.message || "OTP verification failed",
         variant: "destructive",
       });
     } finally {
@@ -47,15 +47,15 @@ const ConfirmEmail = () => {
   const handleResendCode = async () => {
     setResending(true);
     try {
-      await authAPI.resendCode(email);
+      await authAPI.resendCode(); // Call resendCode without email parameter
       toast({
         title: "Success!",
-        description: "Verification code resent to your email.",
+        description: "An OTP has been sent to your email address.", // Use message from API docs
       });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to resend code",
+        description: error.message || "Failed to resend OTP",
         variant: "destructive",
       });
     } finally {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // Import Link
 import { Button } from "@/components/ui/button";
 import QuoteForm from "./QuoteForm";
 import hero1 from "@/assets/hero1.jpg";
@@ -50,9 +51,11 @@ const HeroSection = () => {
               transport for individuals and businesses.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="bg-primary hover:bg-primary/90">
-                Get a Free Quote
-              </Button>
+              <Link to="/shipping-quote">
+                <Button size="lg" className="bg-primary hover:bg-primary/90">
+                  Get a Free Quote
+                </Button>
+              </Link>
               <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white hover:text-foreground">
                 Track My Shipment
               </Button>

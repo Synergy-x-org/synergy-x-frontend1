@@ -7,7 +7,7 @@ const ReadyToShip = () => {
   const navigate = useNavigate(); // Initialize useNavigate
 
   const handleGetQuote = () => {
-    navigate('/login'); // Navigate to login page
+    navigate('/shipping-quote'); // Navigate to shipping quote page
   };
 
   return (

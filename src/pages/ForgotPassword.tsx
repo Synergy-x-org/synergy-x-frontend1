@@ -17,16 +17,16 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      await authAPI.forgotPassword({ email });
+      const response = await authAPI.forgotPassword({ email });
       toast({
         title: "Success!",
-        description: "Verification code sent to your email.",
+        description: response.message, // Use message from API response
       });
       navigate("/confirm-email", { state: { email, fromForgotPassword: true } });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to send verification code",
+        description: error.message || "Forgot password failed",
         variant: "destructive",
       });
     } finally {

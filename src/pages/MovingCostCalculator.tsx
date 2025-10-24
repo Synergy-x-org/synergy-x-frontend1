@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,12 +10,101 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { carBrandsAPI, quotesAPI } from '@/services/api'; // Import carBrandsAPI and quotesAPI
+import { toast } from "@/hooks/use-toast"; // Import toast
 
-import movingCostHero from "@/assets/movingcost.png"; // Import the image from assets
+import movingCostHero from "@/assets/movingcost.png";
 import Testimonials from '@/components/Testimonials';
 import Footer from '@/components/Footer';
 
 const MovingCostCalculator = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [carBrands, setCarBrands] = useState<string[]>([]);
+  const [carModels, setCarModels] = useState<Record<string, number[]>>({});
+  const [formData, setFormData] = useState({
+    pickupLocation: "",
+    deliveryLocation: "",
+    year: "",
+    brand: "",
+    model: "",
+    pickupDate: "",
+    email: "",
+    phoneNumber: "",
+  });
+
+  // Fetch car brands on component mount
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const fetchedBrands = await carBrandsAPI.getAllCarBrands();
+        setCarBrands(fetchedBrands);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to fetch car brands",
+          variant: "destructive",
+        });
+      }
+    };
+    fetchBrands();
+  }, []);
+
+  // Fetch models when brand changes
+  useEffect(() => {
+    if (formData.brand) {
+      const fetchModels = async () => {
+        try {
+          const fetchedModels = await carBrandsAPI.getModelsByBrand(formData.brand);
+          setCarModels(fetchedModels);
+          setFormData((prev) => ({ ...prev, model: "", year: "" })); // Reset model and year when brand changes
+        } catch (error: any) {
+          toast({
+            title: "Error",
+            description: error.message || `Failed to fetch models for brand ${formData.brand}`,
+            variant: "destructive",
+          });
+        }
+      };
+      fetchModels();
+    } else {
+      setCarModels({});
+      setFormData((prev) => ({ ...prev, model: "", year: "" }));
+    }
+  }, [formData.brand]);
+
+  // Update available years when model changes
+  useEffect(() => {
+    if (formData.model && carModels[formData.model]) {
+      setFormData((prev) => ({ ...prev, year: "" })); // Reset year when model changes
+    }
+  }, [formData.model, carModels]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await quotesAPI.calculateVisitorQuote({
+        ...formData,
+        year: parseInt(formData.year), // Ensure year is a number
+      });
+      toast({
+        title: "Success!",
+        description: "Quote calculated successfully.",
+      });
+      navigate("/quote-result", { state: { quote: response } });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to calculate quote",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section with Calculator Form */}
@@ -35,56 +124,113 @@ const MovingCostCalculator = () => {
                 <form className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
-                      <Input id="location" type="text" placeholder="Enter pickup location" />
+                      <label htmlFor="pickupLocation" className="block text-sm font-medium text-gray-700">Location</label>
+                      <Input
+                        id="pickupLocation"
+                        type="text"
+                        placeholder="Enter pickup location"
+                        value={formData.pickupLocation}
+                        onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value })}
+                        required
+                      />
                     </div>
                     <div>
-                      <label htmlFor="destination" className="block text-sm font-medium text-gray-700">Destination</label>
-                      <Input id="destination" type="text" placeholder="Enter delivery destination" />
+                      <label htmlFor="deliveryLocation" className="block text-sm font-medium text-gray-700">Destination</label>
+                      <Input
+                        id="deliveryLocation"
+                        type="text"
+                        placeholder="Enter delivery destination"
+                        value={formData.deliveryLocation}
+                        onChange={(e) => setFormData({ ...formData, deliveryLocation: e.target.value })}
+                        required
+                      />
                     </div>
                     <div>
-                      <label htmlFor="year" className="block text-sm font-medium text-gray-700">Year</label>
-                      <Select>
+                      <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Car Brand</label>
+                      <Select
+                        value={formData.brand}
+                        onValueChange={(value) => setFormData({ ...formData, brand: value })}
+                      >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Year" />
+                          <SelectValue placeholder="Select Car Brand" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="2024">2024</SelectItem>
-                          <SelectItem value="2023">2023</SelectItem>
-                          <SelectItem value="2022">2022</SelectItem>
+                          {carBrands.map((brand) => (
+                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <label htmlFor="car-model" className="block text-sm font-medium text-gray-700">Car Model</label>
-                      <Select>
+                      <label htmlFor="model" className="block text-sm font-medium text-gray-700">Car Model</label>
+                      <Select
+                        value={formData.model}
+                        onValueChange={(value) => setFormData({ ...formData, model: value })}
+                        disabled={!formData.brand}
+                      >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Car Model" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="model1">Model 1 (from backend)</SelectItem>
-                          <SelectItem value="model2">Model 2 (from backend)</SelectItem>
+                          {Object.keys(carModels).map((model) => (
+                            <SelectItem key={model} value={model}>{model}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <label htmlFor="maker" className="block text-sm font-medium text-gray-700">Maker</label>
-                      <Select>
+                      <label htmlFor="year" className="block text-sm font-medium text-gray-700">Year</label>
+                      <Select
+                        value={formData.year}
+                        onValueChange={(value) => setFormData({ ...formData, year: value })}
+                        disabled={!formData.model}
+                      >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Maker" />
+                          <SelectValue placeholder="Select Year" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="make1">Make 1 (from backend)</SelectItem>
-                          <SelectItem value="make2">Make 2 (from backend)</SelectItem>
+                          {formData.model && carModels[formData.model]?.map((year) => (
+                            <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <label htmlFor="ship-date" className="block text-sm font-medium text-gray-700">Ship Date</label>
-                      <Input id="ship-date" type="date" />
+                      <label htmlFor="pickupDate" className="block text-sm font-medium text-gray-700">Pickup Date</label>
+                      <Input
+                        id="pickupDate"
+                        type="date"
+                        value={formData.pickupDate}
+                        onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                      <Input
+                        id="phoneNumber"
+                        type="tel"
+                        placeholder="Enter your phone number"
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                        required
+                      />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90">Calculate Quote</Button>
+                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
+                    {loading ? "Calculating..." : "Calculate Quote"}
+                  </Button>
                 </form>
               </CardContent>
             </Card>

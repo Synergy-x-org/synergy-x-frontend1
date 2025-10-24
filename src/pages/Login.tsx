@@ -23,15 +23,18 @@ const Login = () => {
       const response = await authAPI.login(formData);
       toast({
         title: "Success!",
-        description: "You have successfully logged in.",
+        description: response.message, // Use message from API response
       });
-      // Store token if needed
-      // localStorage.setItem("token", response.token);
-      navigate("/");
+      // Store token and role
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("userRole", response.role);
+      localStorage.setItem("userEmail", response.email); // Store email
+      localStorage.setItem("tokenExpiration", response.expirationTime); // Store expiration time
+      navigate("/"); // Redirect to home page
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Invalid email or password",
+        description: error.message || "Login failed",
         variant: "destructive",
       });
     } finally {
