@@ -12,7 +12,7 @@ export interface SignupData {
   email: string;
   phoneNumber: string; // Changed from 'phone' to 'phoneNumber'
   password: string;
-  role: "USER"; // Added role
+  role: "USER" | "ADMIN"; // Allow selecting role
 }
 
 export interface ForgotPasswordData {
@@ -79,7 +79,7 @@ export const authAPI = {
 
   otpConfirmation: async (otp: string) => {
     const response = await fetch(`${BASE_URL}/auth/otp/confirmation?otp=${otp}`, {
-      method: "GET",
+      method: "GET", // Reverted to GET
     });
 
     const responseData = await response.json();
@@ -101,17 +101,40 @@ export const authAPI = {
       body: JSON.stringify(data),
     });
 
-    const responseData = await response.json();
+    let responseData;
+    const contentType = response.headers.get("content-type");
+    const successMessage = "Registration Successful! An OTP has been sent to your email to verify your account"; // Exact message from backend
 
-    // Explicitly check for the success message, as the backend might return a non-2xx status
-    // even for a logically successful registration that requires OTP verification.
-    if (responseData.message === "User registered successfully. Please check your email for OTP verification.") {
-      return responseData; // Treat as success for redirection
-    } else if (response.ok) {
-      return responseData; // Other successful responses
+    // Always read the response as text first
+    const responseText = await response.text();
+
+    // Trim whitespace from the responseText for a more robust comparison
+    const trimmedResponseText = responseText.trim();
+
+    // Prioritize checking for the presence of the success message (case-insensitive) in the response text.
+    // If found, always return a success object to allow frontend navigation, regardless of Content-Type or response.ok status.
+    if (trimmedResponseText.toLowerCase().includes(successMessage.toLowerCase())) {
+      return { message: successMessage };
+    }
+
+    // If the specific success message is NOT found, then proceed with standard error handling.
+    // Try to parse as JSON if the content type indicates it.
+    if (contentType && contentType.includes("application/json")) {
+      try {
+        responseData = JSON.parse(trimmedResponseText);
+        // If response is not OK, and it's a JSON error, throw it.
+        if (!response.ok) {
+          throw new Error(responseData.message || "Registration failed");
+        }
+        return responseData; // Return successful JSON response
+      } catch (jsonError) {
+        // If JSON parsing fails despite Content-Type, it's a malformed JSON error.
+        throw new Error(`Server responded with malformed JSON: ${trimmedResponseText}`);
+      }
     } else {
-      // Handle actual errors like "User Already Exists"
-      throw new Error(responseData.message || "Registration failed");
+      // If Content-Type is not JSON and it's not the specific success message,
+      // then it's an unexpected non-JSON error.
+      throw new Error(`Server responded with non-JSON: ${trimmedResponseText}`);
     }
   },
 

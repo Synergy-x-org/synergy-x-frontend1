@@ -47,11 +47,8 @@ const ResetPassword = () => {
         newPassword: formData.newPassword,
         confirmPassword: formData.confirmPassword,
       });
-      toast({
-        title: "Success!",
-        description: response.message, // Use message from API response
-      });
-      navigate("/login");
+      // No toast here, as per Figma, the success page will handle the message
+      navigate("/password-changed");
     } catch (error: any) {
       toast({
         title: "Error",

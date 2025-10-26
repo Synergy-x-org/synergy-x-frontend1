@@ -1,17 +1,38 @@
-import { useState } from "react";
-import { Link } from "react-router-dom"; // Import Link
-import { Menu, X, ChevronDown } from "lucide-react"; // Import ChevronDown
+import { useState, useEffect } from "react"; // Import useEffect
+import { Link } from "react-router-dom";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
+} from "@/components/ui/dropdown-menu";
 import logo from "@/assets/logo.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("User"); // Default name
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userEmail = localStorage.getItem("userEmail"); // Assuming email is stored
+    setIsLoggedIn(!!token);
+    if (userEmail) {
+      setUserName(userEmail.split('@')[0]); // Use part of email as name
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("tokenExpiration");
+    setIsLoggedIn(false);
+    setUserName("User");
+    // Optionally navigate to login or home
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-50 border-b border-border">
@@ -24,9 +45,11 @@ const Header = () => {
             <Link to="/shipping-quote" className="text-muted-foreground hover:text-foreground transition-colors">
               Cost shipping calculator
             </Link>
-            {/* <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-              Teams
-            </a> */}
+            {isLoggedIn && ( // Conditionally render "Track My Shipment"
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                Track My Shipment
+              </a>
+            )}
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
               Help
             </a>
@@ -86,11 +109,25 @@ const Header = () => {
             </Link>
           </nav>
 
-          {/* CTA Button Desktop */}
+          {/* User Greeting / CTA Button Desktop */}
           <div className="hidden md:block">
-            <Link to="/shipping-quote"> {/* Wrap Button with Link */}
-              <Button className="bg-primary hover:bg-primary/90">Get Started</Button>
-            </Link>
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors focus:outline-none">
+                  Hi, {userName}! <ChevronDown className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/login">
+                <Button className="bg-primary hover:bg-primary/90">Get Started</Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -110,13 +147,15 @@ const Header = () => {
               <Link to="/moving-cost-calculator" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
                   Moving cost calculator
                 </Link>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1">
+                <Link to="/shipping-quote" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
                   Cost shipping calculator
-                </a>
-                {/* <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1">
-                  Teams
-                </a> */}
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1">
+                </Link>
+                {isLoggedIn && ( // Conditionally render "Track My Shipment"
+                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
+                    Track My Shipment
+                  </a>
+                )}
+                <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
                   Help
                 </a>
                 <hr className="border-border my-2" />
@@ -174,9 +213,20 @@ const Header = () => {
               >
                 Contact Us
               </Link>
-              <Link to="/shipping-quote"> {/* Wrap Button with Link */}
-                <Button className="bg-primary hover:bg-primary/90 mt-2">Get Started</Button>
-              </Link>
+              {isLoggedIn ? (
+                <>
+                  <Link to="/profile" className="text-sm font-medium hover:text-primary transition-colors py-2" onClick={() => setIsMenuOpen(false)}>
+                    Profile
+                  </Link>
+                  <Button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="bg-primary hover:bg-primary/90 mt-2">
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <Link to="/login">
+                  <Button className="bg-primary hover:bg-primary/90 mt-2">Get Started</Button>
+                </Link>
+              )}
             </nav>
           </div>
         )}

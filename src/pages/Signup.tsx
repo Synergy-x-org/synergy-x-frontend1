@@ -3,19 +3,21 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
 import { toast } from "@/hooks/use-toast";
-import { authAPI } from "@/services/api";
+import { authAPI, SignupData } from "@/services/api"; // Import SignupData
 import logo from "@/assets/logo.png";
 
 const Signup = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<SignupData>({ // Explicitly type formData
     firstName: "",
     lastName: "",
     email: "",
-    phoneNumber: "", // Changed from 'phone' to 'phoneNumber'
+    phoneNumber: "",
     password: "",
+    role: "USER", // Default role
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,14 +25,22 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const dataToRegister = { ...formData, role: "USER" as const }; // Add role
-      await authAPI.register(dataToRegister);
-      toast({
-        title: "Success!",
-        description: "Account created successfully. Please check your email.",
-      });
-      navigate("/confirm-email", { state: { email: formData.email } });
+      const response = await authAPI.register(formData);
+      console.log("API Response:", response); // Log the response for debugging
+
+      // Updated the success message check to match the exact message returned by the backend
+      if (response && response.message === "Registration Successful! An OTP has been sent to your email to verify your account") {
+        navigate("/signup-success", { state: { email: formData.email } });
+      } else {
+        // Handle other successful responses if any, or unexpected successful responses
+        toast({
+          title: "Success",
+          description: response.message || "Registration successful, but unexpected response.",
+          variant: "default",
+        });
+      }
     } catch (error: any) {
+      console.error("Registration Error:", error); // Log the error for debugging
       toast({
         title: "Error",
         description: error.message || "Registration failed",
@@ -129,6 +139,24 @@ const Signup = () => {
                 required
                 minLength={8}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value: "USER" | "ADMIN") =>
+                  setFormData({ ...formData, role: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USER">User</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button
