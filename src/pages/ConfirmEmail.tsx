@@ -16,27 +16,40 @@ const ConfirmEmail = () => {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [code, setCode] = useState("");
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setMessage(null); // Clear previous messages
 
     try {
-      const response = await authAPI.otpConfirmation(code); // Call new OTP confirmation API
+      const response = await authAPI.otpConfirmation(code);
+      setMessage({ text: "Registration successful! Proceed to login.", type: "success" });
       toast({
         title: "Success!",
-        description: response.message, // Use message from API response
+        description: "Registration successful! Proceed to login.",
       });
+
+      setTimeout(() => {
+        if (fromForgotPassword) {
+          navigate("/password-changed", { state: { email: email } }); // Redirect to password changed page
+        } else {
+          navigate("/login");
+        }
+      }, 2000); // Redirect after 2 seconds
       
-      if (fromForgotPassword) {
-        navigate("/password-changed", { state: { email: email } }); // Redirect to password changed page
-      } else {
-        navigate("/login");
-      }
     } catch (error: any) {
+      let errorMessage = "Server error occurred. Please try again later."; // Default 500 error
+      if (error.message.includes("400")) {
+        errorMessage = "Invalid OTP. Please request a new one.";
+      } else if (error.message.includes("410")) {
+        errorMessage = "Your OTP has expired. A new one has been sent to your email.";
+      }
+      setMessage({ text: errorMessage, type: "error" });
       toast({
         title: "Error",
-        description: error.message || "OTP verification failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -46,16 +59,23 @@ const ConfirmEmail = () => {
 
   const handleResendCode = async () => {
     setResending(true);
+    setMessage(null); // Clear previous messages
     try {
-      await authAPI.resendCode(); // Call resendCode without email parameter
+      const response = await authAPI.resendCode();
+      setMessage({ text: response.message, type: "success" });
       toast({
         title: "Success!",
-        description: "An OTP has been sent to your email address.", // Use message from API docs
+        description: response.message,
       });
     } catch (error: any) {
+      let errorMessage = "Failed to resend OTP. Please try again.";
+      if (error.message.includes("No email found in session")) {
+        errorMessage = "No email found in session. Please request a new password reset.";
+      }
+      setMessage({ text: errorMessage, type: "error" });
       toast({
         title: "Error",
-        description: error.message || "Failed to resend OTP",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -93,15 +113,26 @@ const ConfirmEmail = () => {
                 onChange={(e) => setCode(e.target.value)}
                 required
                 maxLength={6}
+                disabled={loading}
               />
             </div>
+
+            {message && (
+              <div
+                className={`text-sm mt-2 ${
+                  message.type === "success" ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {message.text}
+              </div>
+            )}
 
             <p className="text-center text-sm text-muted-foreground mt-6">
               Didn't receive any mail?{" "}
               <button
                 type="button"
                 onClick={handleResendCode}
-                disabled={resending}
+                disabled={resending || loading}
                 className="text-primary hover:underline font-medium"
               >
                 {resending ? "Resending..." : "Resend confirmation"}

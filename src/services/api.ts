@@ -79,7 +79,10 @@ export const authAPI = {
 
   otpConfirmation: async (otp: string) => {
     const response = await fetch(`${BASE_URL}/auth/otp/confirmation?otp=${otp}`, {
-      method: "GET", // Reverted to GET
+      method: "GET", // Reverted to GET as per provided documentation
+      headers: {
+        "Accept": "application/json", // Still good practice to specify expected response type
+      },
     });
 
     const responseData = await response.json();
@@ -87,8 +90,16 @@ export const authAPI = {
     if (response.ok) {
       return responseData; // { message: "Registration Successful, proceed to login" }
     } else {
-      // Handle errors like "Invalid OTP", "OTP Expired"
-      throw new Error(responseData.message || responseData.error || "OTP verification failed");
+      // Handle errors based on status code or response content
+      let errorMessage = responseData.message || responseData.error || "OTP verification failed";
+      if (response.status === 400) {
+        errorMessage = "Invalid OTP. Please request a new one.";
+      } else if (response.status === 410) {
+        errorMessage = "Your OTP has expired. A new one has been sent to your email.";
+      } else if (response.status === 500) {
+        errorMessage = "Server error occurred. Please try again later.";
+      }
+      throw new Error(errorMessage);
     }
   },
 
@@ -174,21 +185,52 @@ export const authAPI = {
     }
   },
 
-  resendCode: async () => { // No email parameter needed as per API docs
+  resendCode: async () => {
+    // Assuming the token is stored in localStorage or a global state
+    const token = localStorage.getItem("authToken"); // Placeholder for token retrieval
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    };
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${BASE_URL}/auth/users/resend-token`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json", // API expects JSON header even with no body
-      },
+      headers: headers,
       // No body needed as per API docs
     });
 
-    const responseData = await response.json();
+    const responseText = await response.text(); // Read as text first to check specific messages
 
-    if (response.ok) {
-      return responseData; // { message: "An OTP has been sent to your email address" }
+    const successMessage = "Found user email in session: An OTP has been sent to your email address";
+    const noEmailMessage = "No email found in session. Please request a new password reset (session is out after 15 minutes)";
+
+    if (responseText.includes(successMessage)) {
+      return { message: successMessage };
+    } else if (responseText.includes(noEmailMessage)) {
+      throw new Error(noEmailMessage);
+    } else if (response.status === 500) {
+      // Explicitly handle 500 Internal Server Error
+      throw new Error("Server error occurred. Please try again later.");
+    } else if (response.ok) {
+      // If response is OK but not the specific success message, try to parse as JSON
+      try {
+        const responseData = JSON.parse(responseText);
+        return responseData;
+      } catch (jsonError) {
+        throw new Error(`Server responded with unexpected non-JSON success: ${responseText}`);
+      }
     } else {
-      throw new Error(responseData.message || responseData.error || "Resend OTP failed");
+      // Handle other errors (e.g., 4xx), try to parse as JSON if possible
+      try {
+        const errorData = JSON.parse(responseText);
+        throw new Error(errorData.message || errorData.error || "Failed to resend OTP");
+      } catch (jsonError) {
+        throw new Error(responseText || "Failed to resend OTP");
+      }
     }
   }
 };
