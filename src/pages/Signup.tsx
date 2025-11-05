@@ -11,13 +11,13 @@ import logo from "@/assets/logo.png";
 const Signup = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<SignupData>({ // Explicitly type formData
+  const [formData, setFormData] = useState<SignupData>({
     firstName: "",
     lastName: "",
     email: "",
     phoneNumber: "",
     password: "",
-    role: "USER", // Default role
+    role: "USER",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,21 +26,24 @@ const Signup = () => {
 
     try {
       const response = await authAPI.register(formData);
-      console.log("API Response:", response); // Log the response for debugging
+      console.log("API Response:", response);
 
-      // Updated the success message check to match the exact message returned by the backend
-      if (response && response.message === "Registration Successful! An OTP has been sent to your email to verify your account") {
+      // Match backend success message (case-insensitive for flexibility)
+      if (
+        response.message &&
+        response.message.toLowerCase().includes("registration successful")
+      ) {
         navigate("/signup-success", { state: { email: formData.email } });
       } else {
-        // Handle other successful responses if any, or unexpected successful responses
+        // Handle unexpected but valid success
         toast({
           title: "Success",
-          description: response.message || "Registration successful, but unexpected response.",
+          description: response.message || "Registration successful.",
           variant: "default",
         });
       }
     } catch (error: any) {
-      console.error("Registration Error:", error); // Log the error for debugging
+      console.error("Registration Error:", error);
       toast({
         title: "Error",
         description: error.message || "Registration failed",
@@ -141,23 +144,6 @@ const Signup = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: "USER" | "ADMIN") =>
-                  setFormData({ ...formData, role: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USER">User</SelectItem>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             <Button
               type="submit"

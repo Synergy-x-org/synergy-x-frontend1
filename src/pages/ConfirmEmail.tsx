@@ -19,49 +19,45 @@ const ConfirmEmail = () => {
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage(null); // Clear previous messages
+  e.preventDefault();
+  setLoading(true);
+  setMessage(null);
 
-    try {
-      const response = await authAPI.otpConfirmation(code);
-      setMessage({ text: "Registration successful! Proceed to login.", type: "success" });
-      toast({
-        title: "Success!",
-        description: "Registration successful! Proceed to login.",
-      });
+  try {
+    const response = await authAPI.otpConfirmation(code);
 
-      setTimeout(() => {
-        if (fromForgotPassword) {
-          navigate("/password-changed", { state: { email: email } }); // Redirect to password changed page
-        } else {
-          navigate("/login");
-        }
-      }, 2000); // Redirect after 2 seconds
-      
-    } catch (error: any) {
-      let errorMessage = "Server error occurred. Please try again later."; // Default 500 error
-      if (error.message.includes("400")) {
-        errorMessage = "Invalid OTP. Please request a new one.";
-      } else if (error.message.includes("410")) {
-        errorMessage = "Your OTP has expired. A new one has been sent to your email.";
+    setMessage({ text: response.message, type: "success" });
+    toast({
+      title: "Success!",
+      description: response.message,
+    });
+
+    setTimeout(() => {
+      if (fromForgotPassword) {
+        navigate("/password-changed", { state: { email } });
+      } else {
+        navigate("/login");
       }
-      setMessage({ text: errorMessage, type: "error" });
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    }, 1500);
+  } catch (error: any) {
+    // const errorMessage = error.message || "Server error occurred. Please try again later.";
+    // setMessage({ text: errorMessage, type: "error" });
+    toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleResendCode = async () => {
     setResending(true);
     setMessage(null); // Clear previous messages
     try {
-      const response = await authAPI.resendCode();
+      const token = localStorage.getItem("authToken");
+      const response = await authAPI.resendCode(token as string);
       setMessage({ text: response.message, type: "success" });
       toast({
         title: "Success!",
@@ -128,7 +124,7 @@ const ConfirmEmail = () => {
             )}
 
             <p className="text-center text-sm text-muted-foreground mt-6">
-              Didn't receive any mail?{" "}
+              Didn't receive any otp?{" "}
               <button
                 type="button"
                 onClick={handleResendCode}

@@ -20,6 +20,7 @@ export interface ForgotPasswordData {
 }
 
 export interface OtpConfirmationData {
+  // email: string;
   otp: string;
 }
 
@@ -61,47 +62,72 @@ export const authAPI = {
   login: async (data: LoginData) => {
     const response = await fetch(`${BASE_URL}/auth/login`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
-    const responseData = await response.json();
+    // Always read the raw text first
+    const responseText = await response.text();
+
+    // Try to parse JSON if possible
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = null; // not JSON, fallback to text
+    }
 
     if (response.ok) {
-      return responseData; // { statusCode, message, token, role, email, expirationTime }
+      // Prefer message from backend, or raw text if no message
+      return responseData || { message: responseText || "Login successful" };
     } else {
-      // Handle errors like "Invalid email or password"
-      throw new Error(responseData.message || responseData.error || "Login failed");
+      // Extract message from JSON or fallback to raw text
+      const errorMessage =
+        (responseData && (responseData.message || responseData.error)) ||
+        responseText ||
+        "Login failed";
+
+      throw new Error(errorMessage.trim());
     }
   },
+
 
   otpConfirmation: async (otp: string) => {
     const response = await fetch(`${BASE_URL}/auth/otp/confirmation?otp=${otp}`, {
-      method: "GET", // Reverted to GET as per provided documentation
+      method: "POST",
       headers: {
-        "Accept": "application/json", // Still good practice to specify expected response type
+        Accept: "application/json",
       },
     });
 
-    const responseData = await response.json();
+    const responseText = await response.text();
+    let responseData;
+
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { message: responseText };
+    }
 
     if (response.ok) {
-      return responseData; // { message: "Registration Successful, proceed to login" }
+      // ✅ Success: show backend message (e.g., "Registration Successful, proceed to login")
+      return { message: responseData.message || "OTP verified successfully" };
     } else {
-      // Handle errors based on status code or response content
+      // ✅ Handle backend-defined error messages precisely
       let errorMessage = responseData.message || responseData.error || "OTP verification failed";
+
       if (response.status === 400) {
-        errorMessage = "Invalid OTP. Please request a new one.";
+        errorMessage = responseData.message || "Validation failed. Please request a new OTP.";
       } else if (response.status === 410) {
-        errorMessage = "Your OTP has expired. A new one has been sent to your email.";
-      } else if (response.status === 500) {
+        errorMessage = responseData.message || "Your OTP has expired. A new OTP has been sent to your email.";
+      } else if (response.status >= 500) {
         errorMessage = "Server error occurred. Please try again later.";
       }
+
       throw new Error(errorMessage);
     }
   },
+
 
   register: async (data: SignupData) => {
     const response = await fetch(`${BASE_URL}/auth/register`, {
@@ -112,60 +138,71 @@ export const authAPI = {
       body: JSON.stringify(data),
     });
 
-    let responseData;
-    const contentType = response.headers.get("content-type");
-    const successMessage = "Registration Successful! An OTP has been sent to your email to verify your account"; // Exact message from backend
-
-    // Always read the response as text first
+    // Always read as plain text first (backend may send text or JSON)
     const responseText = await response.text();
+    const trimmedText = responseText.trim();
 
-    // Trim whitespace from the responseText for a more robust comparison
-    const trimmedResponseText = responseText.trim();
-
-    // Prioritize checking for the presence of the success message (case-insensitive) in the response text.
-    // If found, always return a success object to allow frontend navigation, regardless of Content-Type or response.ok status.
-    if (trimmedResponseText.toLowerCase().includes(successMessage.toLowerCase())) {
-      return { message: successMessage };
+    let responseData: any = null;
+    try {
+      responseData = JSON.parse(trimmedText);
+    } catch {
+      responseData = null; // Not JSON, fallback to plain text
     }
 
-    // If the specific success message is NOT found, then proceed with standard error handling.
-    // Try to parse as JSON if the content type indicates it.
-    if (contentType && contentType.includes("application/json")) {
-      try {
-        responseData = JSON.parse(trimmedResponseText);
-        // If response is not OK, and it's a JSON error, throw it.
-        if (!response.ok) {
-          throw new Error(responseData.message || "Registration failed");
-        }
-        return responseData; // Return successful JSON response
-      } catch (jsonError) {
-        // If JSON parsing fails despite Content-Type, it's a malformed JSON error.
-        throw new Error(`Server responded with malformed JSON: ${trimmedResponseText}`);
-      }
-    } else {
-      // If Content-Type is not JSON and it's not the specific success message,
-      // then it's an unexpected non-JSON error.
-      throw new Error(`Server responded with non-JSON: ${trimmedResponseText}`);
+    // Normalize backend messages
+    const backendMessage =
+      (responseData && (responseData.message || responseData.error)) ||
+      trimmedText ||
+      "Unknown server response";
+
+    // Handle success
+    if (response.ok) {
+      return { message: backendMessage };
     }
+
+    // Handle non-OK responses (4xx, 5xx)
+    throw new Error(backendMessage);  
   },
 
-  forgotPassword: async (data: ForgotPasswordData) => {
+
+  forgetPassword: async (email: string) => {
     const response = await fetch(`${BASE_URL}/auth/users/forget_password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ email }),
     });
 
-    const responseData = await response.json();
+    const responseText = await response.text();
+    let responseData;
+
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { message: responseText };
+    }
 
     if (response.ok) {
-      return responseData; // { message: "An OTP has been sent to your email address" }
+      // ✅ Backend success message: "An OTP has been sent to your email address"
+      return { message: responseData.message || "An OTP has been sent to your email address" };
     } else {
-      throw new Error(responseData.message || responseData.error || "Forgot password failed");
+      // ✅ Handle known errors gracefully
+      let errorMessage = responseData.message || responseData.error || "Failed to process password reset";
+
+      if (response.status === 404) {
+        errorMessage = "Email not found. Please check and try again.";
+      } else if (response.status === 400) {
+        errorMessage = "Invalid email format.";
+      } else if (response.status >= 500) {
+        errorMessage = "Server error occurred. Please try again later.";
+      }
+
+      throw new Error(errorMessage);
     }
   },
+
+
 
   resetPassword: async (data: ResetPasswordData) => {
     const response = await fetch(`${BASE_URL}/auth/users/reset_password`, {
@@ -185,22 +222,15 @@ export const authAPI = {
     }
   },
 
-  resendCode: async () => {
-    // Assuming the token is stored in localStorage or a global state
-    const token = localStorage.getItem("authToken"); // Placeholder for token retrieval
-
+  resendCode: async (token: string) => {
     const headers: HeadersInit = {
-      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": `Bearer ${token}`,
     };
-
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
 
     const response = await fetch(`${BASE_URL}/auth/users/resend-token`, {
       method: "POST",
       headers: headers,
-      // No body needed as per API docs
     });
 
     const responseText = await response.text(); // Read as text first to check specific messages

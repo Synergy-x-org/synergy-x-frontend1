@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { carBrandsAPI, quotesAPI } from "@/services/api"; // Import APIs
+import MapView from "@/components/MapView"; // Import MapView
 
 const ShippingQuote = () => {
   const navigate = useNavigate();
@@ -247,152 +248,133 @@ const ShippingQuote = () => {
               Calculate your car shipping cost
             </h1>
 
-            <form onSubmit={handleCalculate} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pickupLocation">Pickup Location</Label>
-                  <Input
-                    id="pickupLocation"
-                    type="text"
-                    placeholder="Enter pickup location"
-                    value={formData.pickupLocation}
-                    onChange={(e) =>
-                      setFormData({ ...formData, pickupLocation: e.target.value })
-                    }
-                    required
-                  />
-                </div>
+            <div className="flex flex-col md:flex-row gap-8">
+              <div className="md:w-1/2">
+                <form onSubmit={handleCalculate} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="brand">Car Brand</Label>
+                      <Select
+                        value={formData.brand}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, brand: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select car brand" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {carBrands.map((brand) => (
+                            <SelectItem key={brand} value={brand}>
+                              {brand}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryLocation">Delivery Location</Label>
-                  <Input
-                    id="deliveryLocation"
-                    type="text"
-                    placeholder="Enter delivery location"
-                    value={formData.deliveryLocation}
-                    onChange={(e) =>
-                      setFormData({ ...formData, deliveryLocation: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="model">Car Model</Label>
+                      <Select
+                        value={formData.model}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, model: value })
+                        }
+                        disabled={!formData.brand}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select car model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(carModels).map((model) => (
+                            <SelectItem key={model} value={model}>
+                              {model}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="brand">Car Brand</Label>
-                  <Select
-                    value={formData.brand}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, brand: value })
-                    }
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="year">Year</Label>
+                      <Select
+                        value={formData.year}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, year: value })
+                        }
+                        disabled={!formData.model}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {formData.model && carModels[formData.model]?.map((year) => (
+                            <SelectItem key={year} value={year.toString()}>
+                              {year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="pickupDate">Pickup Date</Label>
+                      <Input
+                        id="pickupDate"
+                        type="date"
+                        placeholder="mm/dd/yyyy"
+                        value={formData.pickupDate}
+                        onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phoneNumber">Phone Number</Label>
+                      <Input
+                        id="phoneNumber"
+                        type="tel"
+                        placeholder="Enter your phone number"
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-primary hover:bg-primary/90 text-white"
+                    disabled={loading}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select car brand" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {carBrands.map((brand) => (
-                        <SelectItem key={brand} value={brand}>
-                          {brand}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="model">Car Model</Label>
-                  <Select
-                    value={formData.model}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, model: value })
-                    }
-                    disabled={!formData.brand}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select car model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(carModels).map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {loading ? "Calculating..." : "Calculate Quote"}
+                  </Button>
+                </form>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="year">Year</Label>
-                  <Select
-                    value={formData.year}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, year: value })
-                    }
-                    disabled={!formData.model}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {formData.model && carModels[formData.model]?.map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="pickupDate">Pickup Date</Label>
-                  <Input
-                    id="pickupDate"
-                    type="date"
-                    placeholder="mm/dd/yyyy"
-                    value={formData.pickupDate}
-                    onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
-                    required
-                  />
-                </div>
+              <div className="md:w-1/2">
+                <MapView
+                  onOriginChange={(origin) => setFormData((prev) => ({ ...prev, pickupLocation: origin }))}
+                  onDestinationChange={(destination) => setFormData((prev) => ({ ...prev, deliveryLocation: destination }))}
+                  onDistanceChange={(distance) => console.log("Distance:", distance)} // You can use this to update a state if needed
+                />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    value={formData.phoneNumber}
-                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-white"
-                disabled={loading}
-              >
-                {loading ? "Calculating..." : "Calculate Quote"}
-              </Button>
-            </form>
+            </div>
 
             <p className="text-center text-sm text-muted-foreground mt-6">
               We respect your privacy and do not distribute your personal information.

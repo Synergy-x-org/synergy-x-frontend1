@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MapPin, X } from "lucide-react";
+import { X } from "lucide-react"; // Removed MapPin as it's now in MapView
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingState from "@/components/LoadingState";
-import { QuoteVisitorResponse } from "@/services/api"; // Import QuoteVisitorResponse
-import { mapAPI, MapResponse } from "@/services/mapApi"; // Import mapAPI and MapResponse
+import { QuoteVisitorResponse } from "@/services/api";
 import { toast } from "@/hooks/use-toast";
+import MapView from "@/components/MapView"; // Import MapView
 
 interface QuoteData extends QuoteVisitorResponse {
-  distance: string;
-  duration: string;
-  mapImageUrl: string;
+  distance: string; // Keep distance for display in header
+  duration: string; // Keep duration if needed elsewhere, but not directly used by MapView
 }
 
 const QuoteResult = () => {
@@ -21,61 +20,34 @@ const QuoteResult = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [mapDistance, setMapDistance] = useState<string | null>(null); // State to hold distance from MapView
 
   useEffect(() => {
     // Check if user is logged in
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
 
-    const fetchResults = async () => {
-      setIsLoading(true);
-      const quoteResponse: QuoteVisitorResponse | undefined = location.state?.quote;
+    const quoteResponse: QuoteVisitorResponse | undefined = location.state?.quote;
 
-      if (!quoteResponse) {
-        toast({
-          title: "Error",
-          description: "No quote data found. Please calculate a new quote.",
-          variant: "destructive",
-        });
-        navigate("/"); // Redirect to home or quote form
-        setIsLoading(false);
-        return;
-      }
+    if (!quoteResponse) {
+      toast({
+        title: "Error",
+        description: "No quote data found. Please calculate a new quote.",
+        variant: "destructive",
+      });
+      navigate("/"); // Redirect to home or quote form
+      setIsLoading(false);
+      return;
+    }
 
-      try {
-        const mapResponse: MapResponse = await mapAPI.getRouteAndDistance({
-          origin: quoteResponse.pickupLocation,
-          destination: quoteResponse.deliveryLocation,
-        });
+    // Initialize quoteData directly from quoteResponse
+    setQuoteData({
+      ...quoteResponse,
+      distance: "N/A", // MapView will update this
+      duration: "N/A", // MapView will update this
+    });
+    setIsLoading(false); // Set loading to false as quote data is available
 
-        const fullQuoteData: QuoteData = {
-          ...quoteResponse,
-          distance: mapResponse.distance,
-          duration: mapResponse.duration,
-          mapImageUrl: mapResponse.mapImageUrl,
-        };
-        
-        setQuoteData(fullQuoteData);
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to fetch map data",
-          variant: "destructive",
-        });
-        console.error("Error fetching map data:", error);
-        // Even if map fails, display quote data if available
-        setQuoteData({
-          ...quoteResponse,
-          distance: "N/A",
-          duration: "N/A",
-          mapImageUrl: "https://via.placeholder.com/600x400?text=Map+Unavailable", // Placeholder image
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchResults();
   }, [location.state, navigate]);
 
   const handleGetStarted = () => {
@@ -226,9 +198,9 @@ const QuoteResult = () => {
                   {quoteData.pickupLocation}
                 </span>
                 <div className="flex-1 border-t-2 border-dashed border-muted-foreground max-w-[200px]" />
-                <MapPin className="text-primary" />
-                <span className="text-muted-foreground">{quoteData.distance}</span> {/* Display distance from map API */}
-                <MapPin className="text-primary" />
+                {/* Removed MapPin here as it's handled by MapView */}
+                <span className="text-muted-foreground">{mapDistance || quoteData.distance}</span> {/* Display distance from map API */}
+                {/* Removed MapPin here as it's handled by MapView */}
                 <div className="flex-1 border-t-2 border-dashed border-muted-foreground max-w-[200px]" />
                 <span className="bg-primary text-white px-4 py-2 rounded-lg">
                   {quoteData.deliveryLocation}
@@ -237,17 +209,12 @@ const QuoteResult = () => {
 
               {/* Map Container */}
               <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
-                <div className="aspect-square w-full bg-muted flex items-center justify-center">
-                  <img
-                    src={quoteData.mapImageUrl}
-                    alt="Route Map"
-                    className="w-full h-full object-cover"
-                    style={{ minHeight: "500px" }}
+                <div className="w-full h-[500px] bg-muted flex items-center justify-center">
+                  <MapView
+                    initialOrigin={quoteData.pickupLocation}
+                    initialDestination={quoteData.deliveryLocation}
+                    onDistanceChange={setMapDistance} // Pass callback to update distance
                   />
-                </div>
-                {/* Distance overlay */}
-                <div className="absolute top-4 right-4 bg-white text-foreground px-3 py-1 rounded-md shadow-sm text-sm font-medium">
-                  Distance: {quoteData.distance}
                 </div>
               </div>
 
