@@ -26,31 +26,47 @@ const ConfirmEmail = () => {
   try {
     const response = await authAPI.otpConfirmation(code);
 
-    setMessage({ text: response.message, type: "success" });
-    toast({
-      title: "Success!",
-      description: response.message,
-    });
+    const successMessage = response.message?.toLowerCase() || "";
+    const isSuccess =
+      successMessage.includes("registration successful") ||
+      successMessage.includes("proceed to login");
 
-    setTimeout(() => {
-      if (fromForgotPassword) {
-        navigate("/password-changed", { state: { email } });
-      } else {
-        navigate("/login");
-      }
-    }, 1500);
+    if (isSuccess) {
+      setMessage({ text: response.message, type: "success" });
+      toast({
+        title: "Success!",
+        description: response.message,
+      });
+
+      setTimeout(() => {
+        if (fromForgotPassword) {
+          navigate("/password-changed", { state: { email } });
+        } else {
+          navigate("/login");
+        }
+      }, 1500);
+    } else {
+      setMessage({ text: response.message || "OTP verification failed.", type: "error" });
+      toast({
+        title: "Failed",
+        description: response.message || "Invalid or expired OTP.",
+        variant: "destructive",
+      });
+    }
   } catch (error: any) {
-    // const errorMessage = error.message || "Server error occurred. Please try again later.";
-    // setMessage({ text: errorMessage, type: "error" });
+    const errorMessage = error.message || "Server error occurred. Please try again later.";
+    setMessage({ text: errorMessage, type: "error" });
     toast({
-      title: "Error",
-      description: error.message,
+      title: "Failed",
+      description: errorMessage,
       variant: "destructive",
     });
   } finally {
     setLoading(false);
   }
 };
+
+
 
   const handleResendCode = async () => {
     setResending(true);
@@ -95,7 +111,7 @@ const ConfirmEmail = () => {
             Almost There!
           </h1>
           <p className="text-center text-muted-foreground mb-8">
-            Check your email box to confirm
+            Check your email box for OTP
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -121,6 +137,12 @@ const ConfirmEmail = () => {
               >
                 {message.text}
               </div>
+            )}
+            
+            {message?.type === "error" && (
+              <p className="text-sm text-red-600 text-center mt-2">
+                Didn’t get the right OTP? Try resending or check your email again.
+              </p>
             )}
 
             <p className="text-center text-sm text-muted-foreground mt-6">
