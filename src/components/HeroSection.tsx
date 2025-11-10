@@ -1,22 +1,35 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // Import Link
-import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { Button } from "./ui/button";
 import QuoteForm from "./QuoteForm";
-import hero1 from "@/assets/hero1.jpg";
-import hero2 from "@/assets/hero2.jpg";
-import hero3 from "@/assets/hero3.jpg";
+import hero1 from "../assets/hero1.jpg";
+import hero2 from "../assets/hero2.jpg";
+import hero3 from "../assets/hero3.jpg";
 
 const heroImages = [hero1, hero2, hero3];
 
 const HeroSection = () => {
   const [currentImage, setCurrentImage] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(!!token);
+    };
+
+    checkLoginStatus(); // Check status on mount
+
+    window.addEventListener("storage", checkLoginStatus); // Listen for storage changes
+
     const timer = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % heroImages.length);
     }, 4000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("storage", checkLoginStatus); // Clean up event listener
+    };
   }, []);
 
   return (
@@ -56,9 +69,11 @@ const HeroSection = () => {
                   Get a Free Quote
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white hover:text-foreground">
-                Track My Shipment
-              </Button>
+              {isLoggedIn && (
+                <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white hover:text-foreground">
+                  Track My Shipment
+                </Button>
+              )}
             </div>
           </div>
 

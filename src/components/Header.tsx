@@ -42,14 +42,6 @@ const Header = () => {
             <Link to="/moving-cost-calculator" className="text-muted-foreground hover:text-foreground transition-colors">
               Moving cost calculator
             </Link>
-            <Link to="/shipping-quote" className="text-muted-foreground hover:text-foreground transition-colors">
-              Cost shipping calculator
-            </Link>
-            {isLoggedIn && ( // Conditionally render "Track My Shipment"
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                Track My Shipment
-              </a>
-            )}
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
               Help
             </a>
@@ -147,14 +139,6 @@ const Header = () => {
               <Link to="/moving-cost-calculator" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
                   Moving cost calculator
                 </Link>
-                <Link to="/shipping-quote" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
-                  Cost shipping calculator
-                </Link>
-                {isLoggedIn && ( // Conditionally render "Track My Shipment"
-                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
-                    Track My Shipment
-                  </a>
-                )}
                 <a href="#" className="text-sm text-muted-foreground hover:text-foreground py-1" onClick={() => setIsMenuOpen(false)}>
                   Help
                 </a>
