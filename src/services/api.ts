@@ -58,6 +58,13 @@ export interface QuoteVisitorResponse {
   pickupdate: string;
 }
 
+export interface GetInTouchData {
+  name: string;
+  phoneNumber: string;
+  email: string;
+  message: string;
+}
+
 export const authAPI = {
   login: async (data: LoginData) => {
     const response = await fetch(`${BASE_URL}/auth/login`, {
@@ -311,6 +318,28 @@ export const quotesAPI = {
       return responseData; // QuoteVisitorResponse
     } else {
       throw new Error(responseData.message || responseData.error || "Failed to calculate quote");
+    }
+  },
+};
+
+export const contactAPI = {
+  getInTouch: async (data: GetInTouchData) => {
+    const response = await fetch(`${BASE_URL}/contact/send-message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    const responseData = await response.json();
+
+    if (response.ok) {
+      return responseData;
+    } else {
+      throw new Error(
+        responseData.message || responseData.error || "Failed to send message"
+      );
     }
   },
 };

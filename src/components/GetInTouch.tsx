@@ -1,27 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Home, Phone, Mail } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { contactAPI } from "@/services/api";
 
 const GetInTouch = () => {
-  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
+    phoneNumber: "",
     email: "",
-    phone: "",
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Message Sent!",
-      description: "We'll get back to you as soon as possible.",
-    });
-    setFormData({ name: "", email: "", phone: "", message: "" });
-  };
+  const [responseMessage, setResponseMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+
+  // 🕒 Automatically clear the message after 30 seconds
+  useEffect(() => {
+    if (responseMessage) {
+      const timer = setTimeout(() => {
+        setResponseMessage("");
+        setIsError(false);
+      }, 30000); 
+
+      return () => clearTimeout(timer);
+    }
+  }, [responseMessage]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -30,6 +35,30 @@ const GetInTouch = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (formData.message.trim().length < 10) {
+      setIsError(true);
+      setResponseMessage("Message must be at least 10 characters long.");
+      return;
+    }
+
+    try {
+      const response = await contactAPI.getInTouch(formData);
+      setIsError(false);
+      setResponseMessage(
+        response.message || "✅ Your message has been sent successfully!"
+      );
+      setFormData({ name: "", phoneNumber: "", email: "", message: "" });
+    } catch (error: any) {
+      setIsError(true);
+      setResponseMessage(
+        error.message || "❌ Something went wrong. Please try again."
+      );
+    }
   };
 
   return (
@@ -43,15 +72,13 @@ const GetInTouch = () => {
             </h2>
             <p className="text-muted-foreground mb-12">
               At Synergy Auto Transport, our goal is to make the relocation of
-              your vehicle as fast, safe and cost effective as possible.
+              your vehicle as fast, safe, and cost-effective as possible.
             </p>
 
             <div className="space-y-8">
               <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
-                    <Home className="h-6 w-6 text-primary" />
-                  </div>
+                <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
+                  <Home className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <h3 className="font-bold mb-1">Our Location</h3>
@@ -62,10 +89,8 @@ const GetInTouch = () => {
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
-                    <Phone className="h-6 w-6 text-primary" />
-                  </div>
+                <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
+                  <Phone className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <h3 className="font-bold mb-1">Phone Number</h3>
@@ -74,10 +99,8 @@ const GetInTouch = () => {
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
-                    <Mail className="h-6 w-6 text-primary" />
-                  </div>
+                <div className="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
+                  <Mail className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <h3 className="font-bold mb-1">Email Address</h3>
@@ -90,49 +113,42 @@ const GetInTouch = () => {
           {/* Right Side - Contact Form */}
           <div className="bg-card p-8 rounded-lg shadow-lg">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Input
-                  name="name"
-                  placeholder="Your name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="bg-background"
-                />
-              </div>
-              <div>
-                <Input
-                  name="email"
-                  type="email"
-                  placeholder="Your Email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="bg-background"
-                />
-              </div>
-              <div>
-                <Input
-                  name="phone"
-                  type="tel"
-                  placeholder="Your phone number"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  className="bg-background"
-                />
-              </div>
-              <div>
-                <Textarea
-                  name="message"
-                  placeholder="Your message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  rows={6}
-                  className="bg-background resize-none"
-                />
-              </div>
+              <Input
+                name="name"
+                placeholder="Your name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                className="bg-background"
+              />
+              <Input
+                name="email"
+                type="email"
+                placeholder="Your Email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className="bg-background"
+              />
+              <Input
+                name="phoneNumber"
+                type="tel"
+                placeholder="Your phone number"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                required
+                className="bg-background"
+              />
+              <Textarea
+                name="message"
+                placeholder="Your message"
+                value={formData.message}
+                onChange={handleChange}
+                required
+                rows={6}
+                className="bg-background resize-none"
+              />
+
               <Button
                 type="submit"
                 size="lg"
@@ -141,6 +157,17 @@ const GetInTouch = () => {
                 Send Message
               </Button>
             </form>
+
+            {/* ✅ Response Message with color + timeout */}
+            {responseMessage && (
+              <p
+                className={`mt-4 text-center font-semibold transition-opacity duration-500 ${
+                  isError ? "text-red-600" : "text-green-600"
+                }`}
+              >
+                {responseMessage}
+              </p>
+            )}
           </div>
         </div>
       </div>
