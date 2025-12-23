@@ -70,13 +70,7 @@ const Header = () => {
                   <Link to="/door-to-door">Door-to-Door</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/motorcycle-shipping">Motorcycle Shipping</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/car-to-another-state">Car to Another State</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/classic-car-shipping">Classic Car Shipping</Link>
+                  <Link to="/car-to-another-state">Ship car to Another State</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/cross-country-car-shipping">Cross Country Car Shipping</Link>
@@ -160,13 +154,7 @@ const Header = () => {
                     <Link to="/door-to-door" onClick={() => setIsMenuOpen(false)}>Door-to-Door</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/motorcycle-shipping" onClick={() => setIsMenuOpen(false)}>Motorcycle Shipping</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/car-to-another-state" onClick={() => setIsMenuOpen(false)}>Car to Another State</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/classic-car-shipping" onClick={() => setIsMenuOpen(false)}>Classic Car Shipping</Link>
+                    <Link to="/ship-to-another-state" onClick={() => setIsMenuOpen(false)}>Ship car to Another State</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/cross-country-car-shipping" onClick={() => setIsMenuOpen(false)}>Cross Country Car Shipping</Link>

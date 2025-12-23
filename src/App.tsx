@@ -16,7 +16,6 @@ import ShippingQuote from "./pages/ShippingQuote";
 import DoorToDoorShipping from "./pages/DoorToDoorShipping";
 import MotorcycleShipping from "./pages/MotorcycleShipping";
 import CarToAnotherState from "./pages/CarToAnotherState";
-import ClassicCarShipping from "./pages/ClassicCarShipping";
 import CrossCountryCarShipping from "./pages/CrossCountryCarShipping";
 import Contact from "./pages/Contact";
 import QuoteResult from "./pages/QuoteResult";
@@ -45,8 +44,7 @@ const App = () => (
           <Route path="/door-to-door" element={<DoorToDoorShipping />} />
           <Route path="/motorcycle-shipping" element={<MotorcycleShipping />} />
           <Route path="/car-to-another-state" element={<CarToAnotherState />} />
-          <Route path="/classic-car-shipping" element={<ClassicCarShipping />} />
-          <Route path="/cross-country-car-shipping" element={<CrossCountryCarShipping />} />
+age          <Route path="/cross-country-car-shipping" element={<CrossCountryCarShipping />} />
           <Route path="/quote-result" element={<QuoteResult />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/moving-cost-calculator" element={<MovingCostCalculator />} />

@@ -65,97 +65,95 @@ const DoorToDoorShipping = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section 
+      <section
         className="relative bg-cover bg-center py-32 text-white"
         style={{ backgroundImage: `url(${doorToDoorHero})` }}
       >
         <div className="absolute inset-0 bg-black opacity-50"></div>
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4">Door-to-Door Shipping</h1>
-          <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto">
-            Get your car delivered safely, anytime, anywhere. Fast, secure, and affordable auto transport for individuals and businesses.
-          </p>
-          <Link to="/login">
-            <Button size="lg" className="bg-primary hover:bg-primary/90">Get a free shipping quote now!</Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* Shipping Cost Calculator Form */}
-      <section className="py-16 bg-gray-100">
-        <div className="container mx-auto px-4 max-w-md">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-center">Calculate your shipping cost</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4">
-                <div>
-                  <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
-                  <Input id="location" type="text" placeholder="Enter pickup location" />
-                </div>
-                <div>
-                  <label htmlFor="destination" className="block text-sm font-medium text-gray-700">Destination</label>
-                  <Input id="destination" type="text" placeholder="Enter delivery destination" />
-                </div>
-                <div>
-                  <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Brand</label>
-                  <select 
-                    id="brand" 
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
-                    value={selectedBrand}
-                    onChange={(e) => setSelectedBrand(e.target.value)}
-                  >
-                    <option value="">Select Brand</option>
-                    {brands.map((brand) => (
-                      <option key={brand} value={brand}>{brand}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="car-model" className="block text-sm font-medium text-gray-700">Car Model</label>
-                  <select 
-                    id="car-model" 
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
-                    value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
-                    disabled={!selectedBrand}
-                  >
-                    <option value="">Select Car Model</option>
-                    {Object.keys(models).map((model) => (
-                      <option key={model} value={model}>{model}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="year" className="block text-sm font-medium text-gray-700">Year</label>
-                  <select 
-                    id="year" 
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
-                    disabled={!selectedModel}
-                  >
-                    <option value="">Select Year</option>
-                    {availableYears.map((year) => (
-                      <option key={year} value={year.toString()}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="ship-date" className="block text-sm font-medium text-gray-700">Ship Date</label>
-                  <Input id="ship-date" type="date" />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                  <Input id="email" type="email" placeholder="Enter your email" />
-                </div>
-                <div>
-                  <label htmlFor="phone-number" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                  <Input id="phone-number" type="tel" placeholder="Enter your phone number" />
-                </div>
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90">Calculate Quote</Button>
-              </form>
-            </CardContent>
-          </Card>
+        <div className="container mx-auto px-4 relative z-10 flex flex-col md:flex-row items-center justify-between">
+          <div className="md:w-1/2 text-center md:text-left">
+            <h1 className="text-4xl md:text-6xl font-bold mb-4">Door-to-Door Shipping</h1>
+            <p className="text-lg md:text-xl mb-8 max-w-2xl">
+              Get your car delivered safely, anytime, anywhere. Fast, secure, and affordable auto transport for individuals and businesses.
+            </p>
+            <Link to="/login">
+              <Button size="lg" className="bg-primary hover:bg-primary/90">Get a free shipping quote now!</Button>
+            </Link>
+          </div>
+          <div className="md:w-1/2 mt-10 md:mt-0">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold text-center">Calculate your shipping cost</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form className="space-y-4">
+                  <div>
+                    <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
+                    <Input id="location" type="text" placeholder="Enter pickup location" />
+                  </div>
+                  <div>
+                    <label htmlFor="destination" className="block text-sm font-medium text-gray-700">Destination</label>
+                    <Input id="destination" type="text" placeholder="Enter delivery destination" />
+                  </div>
+                  <div>
+                    <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Brand</label>
+                    <select
+                      id="brand"
+                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+                      value={selectedBrand}
+                      onChange={(e) => setSelectedBrand(e.target.value)}
+                    >
+                      <option value="">Select Brand</option>
+                      {brands.map((brand) => (
+                        <option key={brand} value={brand}>{brand}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="car-model" className="block text-sm font-medium text-gray-700">Car Model</label>
+                    <select
+                      id="car-model"
+                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      disabled={!selectedBrand}
+                    >
+                      <option value="">Select Car Model</option>
+                      {Object.keys(models).map((model) => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="year" className="block text-sm font-medium text-gray-700">Year</label>
+                    <select
+                      id="year"
+                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+                      disabled={!selectedModel}
+                    >
+                      <option value="">Select Year</option>
+                      {availableYears.map((year) => (
+                        <option key={year} value={year.toString()}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="ship-date" className="block text-sm font-medium text-gray-700">Ship Date</label>
+                    <Input id="ship-date" type="date" />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                    <Input id="email" type="email" placeholder="Enter your email" />
+                  </div>
+                  <div>
+                    <label htmlFor="phone-number" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <Input id="phone-number" type="tel" placeholder="Enter your phone number" />
+                  </div>
+                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90">Calculate Quote</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
 

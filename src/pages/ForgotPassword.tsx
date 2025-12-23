@@ -17,7 +17,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      const response = await authAPI.forgotPassword({ email });
+      const response = await authAPI.forgetPassword(email);
       toast({
         title: "Success!",
         description: response.message, // Use message from API response

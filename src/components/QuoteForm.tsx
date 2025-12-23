@@ -13,9 +13,14 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select"; // ✅ added this
+} from "@/components/ui/select";
 
-const QuoteForm = () => {
+interface QuoteFormProps {
+  initialData?: any;
+  onSubmit?: (data: any) => void;
+}
+
+const QuoteForm: React.FC<QuoteFormProps> = ({ initialData, onSubmit }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [carBrands, setCarBrands] = useState<string[]>([]);
@@ -23,14 +28,14 @@ const QuoteForm = () => {
   const [pickupSuggestions, setPickupSuggestions] = useState<string[]>([]);
   const [deliverySuggestions, setDeliverySuggestions] = useState<string[]>([]);
   const [formData, setFormData] = useState({
-    pickupLocation: "",
-    deliveryLocation: "",
-    year: "",
-    brand: "",
-    model: "",
-    pickupDate: "",
-    email: "",
-    phoneNumber: "",
+    pickupLocation: initialData?.pickupLocation || "",
+    deliveryLocation: initialData?.deliveryLocation || "",
+    year: initialData?.year || "",
+    brand: initialData?.brand || "",
+    model: initialData?.model || "",
+    pickupDate: initialData?.pickupDate || "",
+    email: initialData?.email || "",
+    phoneNumber: initialData?.phoneNumber || "",
   });
 
   // --- Fetch car brands ---
@@ -115,12 +120,16 @@ const QuoteForm = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await quotesAPI.calculateVisitorQuote({
-        ...formData,
-        year: parseInt(formData.year),
-      });
-      toast({ title: "Success!", description: "Quote calculated successfully." });
-      navigate("/quote-result", { state: { quote: response } });
+      if (onSubmit) {
+        await onSubmit(formData);
+      } else {
+        const response = await quotesAPI.calculateVisitorQuote({
+          ...formData,
+          year: parseInt(formData.year),
+        });
+        toast({ title: "Success!", description: "Quote calculated successfully." });
+        navigate("/quote-result", { state: { quote: response } });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
