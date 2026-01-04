@@ -173,7 +173,7 @@ export const authAPI = {
 
 
   forgetPassword: async (email: string) => {
-    const response = await fetch(`${BASE_URL}/auth/users/forget_password`, {
+    const response = await fetch(`${BASE_URL}/auth/forgot-password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -182,37 +182,27 @@ export const authAPI = {
     });
 
     const responseText = await response.text();
-    let responseData;
 
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = { message: responseText };
-    }
+    console.error("Forgot Password RAW:", responseText);
 
-    if (response.ok) {
-      // ✅ Backend success message: "An OTP has been sent to your email address"
-      return { message: responseData.message || "An OTP has been sent to your email address" };
-    } else {
-      // ✅ Handle known errors gracefully
-      let errorMessage = responseData.message || responseData.error || "Failed to process password reset";
-
-      if (response.status === 404) {
-        errorMessage = "Email not found. Please check and try again.";
-      } else if (response.status === 400) {
-        errorMessage = "Invalid email format.";
-      } else if (response.status >= 500) {
-        errorMessage = "Server error occurred. Please try again later.";
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error("Invalid server response");
       }
 
-      throw new Error(errorMessage);
-    }
+      if (!response.ok) {
+        throw new Error(data.message || "Forgot password failed");
+      }
+
+      return data;
   },
 
 
 
   resetPassword: async (data: ResetPasswordData) => {
-    const response = await fetch(`${BASE_URL}/auth/users/reset_password`, {
+    const response = await fetch(`${BASE_URL}/auth/reset-password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -229,47 +219,32 @@ export const authAPI = {
     }
   },
 
-  resendCode: async (token: string) => {
-    const headers: HeadersInit = {
-      "Accept": "application/json",
-      "Authorization": `Bearer ${token}`,
-    };
+resendCode: async (resetRequestId: string) => {
+  const response = await fetch(`${BASE_URL}/auth/resend-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      resetRequestId, // ✅ MUST match backend
+    }),
+  });
 
-    const response = await fetch(`${BASE_URL}/auth/users/resend-token`, {
-      method: "POST",
-      headers: headers,
-    });
+  const responseText = await response.text();
 
-    const responseText = await response.text(); // Read as text first to check specific messages
-
-    const successMessage = "Found user email in session: An OTP has been sent to your email address";
-    const noEmailMessage = "No email found in session. Please request a new password reset (session is out after 15 minutes)";
-
-    if (responseText.includes(successMessage)) {
-      return { message: successMessage };
-    } else if (responseText.includes(noEmailMessage)) {
-      throw new Error(noEmailMessage);
-    } else if (response.status === 500) {
-      // Explicitly handle 500 Internal Server Error
-      throw new Error("Server error occurred. Please try again later.");
-    } else if (response.ok) {
-      // If response is OK but not the specific success message, try to parse as JSON
-      try {
-        const responseData = JSON.parse(responseText);
-        return responseData;
-      } catch (jsonError) {
-        throw new Error(`Server responded with unexpected non-JSON success: ${responseText}`);
-      }
-    } else {
-      // Handle other errors (e.g., 4xx), try to parse as JSON if possible
-      try {
-        const errorData = JSON.parse(responseText);
-        throw new Error(errorData.message || errorData.error || "Failed to resend OTP");
-      } catch (jsonError) {
-        throw new Error(responseText || "Failed to resend OTP");
-      }
-    }
+  let responseData;
+  try {
+    responseData = JSON.parse(responseText);
+  } catch {
+    throw new Error("Invalid server response");
   }
+
+  if (!response.ok) {
+    throw new Error(responseData.message || "Failed to resend OTP");
+  }
+
+  return responseData;
+},
 };
 
 export const carBrandsAPI = {

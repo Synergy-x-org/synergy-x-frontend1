@@ -28,7 +28,8 @@ const Login = () => {
       // Store token and role
       localStorage.setItem("token", response.token);
       localStorage.setItem("userRole", response.role);
-      localStorage.setItem("userEmail", response.email); // Store email
+      localStorage.setItem("user", JSON.stringify(response.user));
+      // localStorage.setItem("userEmail", response.email); // Store email
       localStorage.setItem("tokenExpiration", response.expirationTime); // Store expiration time
       navigate("/"); // Redirect to home page
     } catch (error: any) {
