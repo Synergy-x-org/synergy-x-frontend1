@@ -219,7 +219,7 @@ export const authAPI = {
     }
   },
 
-resendCode: async (resetRequestId: string) => {
+ resendCode: async (resetRequestId: string) => {
   const response = await fetch(`${BASE_URL}/auth/resend-token`, {
     method: "POST",
     headers: {

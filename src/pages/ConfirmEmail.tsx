@@ -18,6 +18,8 @@ const ConfirmEmail = () => {
   const [code, setCode] = useState("");
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setLoading(true);
@@ -26,24 +28,46 @@ const ConfirmEmail = () => {
   try {
     const response = await authAPI.otpConfirmation(code);
 
-    // ✅ OTP valid → backend already confirmed it
-    toast({
-      title: "Success",
-      description: response.message,
-    });
+    // Check for success - handle both registration and forgot password flows
+    const successMessage = response.message?.toLowerCase() || "";
+    const isRegistrationSuccess =
+      successMessage.includes("registration successful") ||
+      successMessage.includes("proceed to login");
+    const isForgotPasswordSuccess = 
+      successMessage.includes("verified") ||
+      successMessage.includes("otp confirmed") ||
+      successMessage.includes("success");
 
-    setTimeout(() => {
-      navigate("/reset-password", {
-        state: { token: code }, // OTP becomes reset token
+    const isSuccess = fromForgotPassword ? isForgotPasswordSuccess : isRegistrationSuccess;
+
+    if (isSuccess) {
+      setMessage({ text: response.message, type: "success" });
+      toast({
+        title: "Success!",
+        description: response.message,
       });
-    }, 1200);
 
+      setTimeout(() => {
+        if (fromForgotPassword) {
+          // Route to reset password page with the OTP token
+          navigate("/reset-password", { state: { token: code } });
+        } else {
+          navigate("/login");
+        }
+      }, 1500);
+    } else {
+      setMessage({ text: response.message || "OTP verification failed.", type: "error" });
+      toast({
+        title: "Failed",
+        description: response.message || "Invalid or expired OTP.",
+        variant: "destructive",
+      });
+    }
   } catch (error: any) {
-    const errorMessage = error.message || "Invalid or expired OTP";
+    const errorMessage = error.message || "Server error occurred. Please try again later.";
     setMessage({ text: errorMessage, type: "error" });
-
     toast({
-      title: "Error",
+      title: "Failed",
       description: errorMessage,
       variant: "destructive",
     });
@@ -51,63 +75,6 @@ const ConfirmEmail = () => {
     setLoading(false);
   }
 };
-
-
-//   const handleSubmit = async (e: React.FormEvent) => {
-//   e.preventDefault();
-//   setLoading(true);
-//   setMessage(null);
-
-//   try {
-//     const response = await authAPI.otpConfirmation(code);
-
-//     // Check for success - handle both registration and forgot password flows
-//     const successMessage = response.message?.toLowerCase() || "";
-//     const isRegistrationSuccess =
-//       successMessage.includes("registration successful") ||
-//       successMessage.includes("proceed to login");
-//     const isForgotPasswordSuccess = 
-//       successMessage.includes("verified") ||
-//       successMessage.includes("otp confirmed") ||
-//       successMessage.includes("success");
-
-//     const isSuccess = fromForgotPassword ? isForgotPasswordSuccess : isRegistrationSuccess;
-
-//     if (isSuccess) {
-//       setMessage({ text: response.message, type: "success" });
-//       toast({
-//         title: "Success!",
-//         description: response.message,
-//       });
-
-//       setTimeout(() => {
-//         if (fromForgotPassword) {
-//           // Route to reset password page with the OTP token
-//           navigate("/reset-password", { state: { token: code } });
-//         } else {
-//           navigate("/login");
-//         }
-//       }, 1500);
-//     } else {
-//       setMessage({ text: response.message || "OTP verification failed.", type: "error" });
-//       toast({
-//         title: "Failed",
-//         description: response.message || "Invalid or expired OTP.",
-//         variant: "destructive",
-//       });
-//     }
-//   } catch (error: any) {
-//     const errorMessage = error.message || "Server error occurred. Please try again later.";
-//     setMessage({ text: errorMessage, type: "error" });
-//     toast({
-//       title: "Failed",
-//       description: errorMessage,
-//       variant: "destructive",
-//     });
-//   } finally {
-//     setLoading(false);
-//   }
-// };
 
 
 

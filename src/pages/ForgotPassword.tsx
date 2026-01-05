@@ -15,23 +15,14 @@ const ForgotPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
 
     try {
       const response = await authAPI.forgetPassword(email);
-      // localStorage.setItem(
-      //   "resetRequestId",
-      //   response.resetRequestId
-      // );
-      localStorage.setItem("resetRequestId", response.resetRequestId);
       toast({
         title: "Success!",
         description: response.message, // Use message from API response
       });
       navigate("/confirm-email", { state: { email, fromForgotPassword: true } });
-      if (!response.resetRequestId) {
-    throw new Error("Password reset session could not be created. Please try again.");
-      }
     } catch (error: any) {
       toast({
         title: "Error",

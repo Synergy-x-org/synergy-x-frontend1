@@ -10,8 +10,9 @@ import logo from "@/assets/logo.png";
 const ResetPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const token = location.state?.token || ""; // Changed from code to token
-  
+
+  const token = location.state?.token;
+
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     newPassword: "",
@@ -20,7 +21,17 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "Reset session expired. Please request a new password reset.",
+        variant: "destructive",
+      });
+      navigate("/forgot-password");
+      return;
+    }
+
     if (formData.newPassword !== formData.confirmPassword) {
       toast({
         title: "Error",
@@ -39,20 +50,28 @@ const ResetPassword = () => {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await authAPI.resetPassword({
-        token, // Pass token
+      setLoading(true);
+
+      await authAPI.resetPassword({
+        token,
         newPassword: formData.newPassword,
         confirmPassword: formData.confirmPassword,
       });
-      // No toast here, as per Figma, the success page will handle the message
-      navigate("/password-changed");
+
+      // ✅ correct place to clear it
+      localStorage.removeItem("resetRequestId");
+
+      toast({
+        title: "Success",
+        description: "Password reset successfully",
+      });
+
+      navigate("/login");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Password reset failed",
+        description: error.message || "Failed to reset password",
         variant: "destructive",
       });
     } finally {
@@ -64,12 +83,11 @@ const ResetPassword = () => {
     <div className="min-h-screen bg-secondary/30 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          {/* Replace logo image here: /src/assets/logo.png */}
           <div className="flex justify-center mb-8">
             <img src={logo} alt="Synergy-X Logo" className="h-12" />
           </div>
 
-          <h1 className="text-2xl font-bold text-center text-foreground mb-2">
+          <h1 className="text-2xl font-bold text-center mb-2">
             Reset Password
           </h1>
           <p className="text-center text-muted-foreground mb-8">
@@ -82,13 +100,11 @@ const ResetPassword = () => {
               <Input
                 id="newPassword"
                 type="password"
-                placeholder="Enter new password"
                 value={formData.newPassword}
                 onChange={(e) =>
                   setFormData({ ...formData, newPassword: e.target.value })
                 }
                 required
-                minLength={8}
               />
             </div>
 
@@ -97,21 +113,15 @@ const ResetPassword = () => {
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Confirm new password"
                 value={formData.confirmPassword}
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
                 required
-                minLength={8}
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Resetting..." : "Submit"}
             </Button>
           </form>
