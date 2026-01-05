@@ -55,6 +55,17 @@ const QuoteStep1: React.FC = () => {
     },
   });
 
+  // track whether there's a saved failed attempt (for a small dev QA retry button)
+  const [hasSavedAttempt, setHasSavedAttempt] = useState(false);
+
+  useEffect(() => {
+    try {
+      setHasSavedAttempt(!!sessionStorage.getItem("lastQuoteAttempt"));
+    } catch {
+      setHasSavedAttempt(false);
+    }
+  }, []);
+
   // Keep local state in-sync if initialData changes (e.g., when returning from edit)
   useEffect(() => {
     setFormData((prev) => ({
@@ -112,10 +123,89 @@ const QuoteStep1: React.FC = () => {
     return missing;
   };
 
+  // -- Payload sanitization helpers (non-visual) --
+  const sanitizePayload = (p: any) => {
+    const sanitizeStr = (s: any) =>
+      typeof s === "string" ? s.trim().replace(/\s+/g, " ") : s;
+
+    const sanitized: any = {
+      pickupLocation: sanitizeStr(p.pickupLocation),
+      deliveryLocation: sanitizeStr(p.deliveryLocation),
+      pickupDate: sanitizeStr(p.pickupDate),
+      brand: sanitizeStr(p.brand),
+      model: sanitizeStr(p.model),
+      year:
+        typeof p.year === "string"
+          ? p.year.trim()
+            ? Number.parseInt(p.year, 10)
+            : undefined
+          : p.year,
+      email: sanitizeStr(p.email),
+      phoneNumber:
+        typeof p.phoneNumber === "string"
+          ? p.phoneNumber.replace(/[^\d\+]/g, "") // remove spaces, parentheses, dashes but keep +
+          : p.phoneNumber,
+      callConsent: !!p.callConsent,
+      smsConsent: !!p.smsConsent,
+    };
+
+    // Ensure date is YYYY-MM-DD (attempt to convert)
+    if (sanitized.pickupDate && !/^\d{4}-\d{2}-\d{2}$/.test(sanitized.pickupDate)) {
+      const dt = new Date(sanitized.pickupDate);
+      if (!Number.isNaN(dt.getTime())) {
+        sanitized.pickupDate = dt.toISOString().slice(0, 10);
+      }
+    }
+
+    return sanitized;
+  };
+
+  // Heuristic to detect suspicious location strings that mix country/state names etc.
+  const looksSuspiciousLocation = (loc: string) => {
+    if (!loc || typeof loc !== "string") return false;
+    const lower = loc.toLowerCase();
+    const hasAustralia = lower.includes("australia");
+    const hasUsa = lower.includes("usa") || lower.includes("united states") || /\b(usa|us|u\.s\.a)\b/.test(lower);
+    if (hasAustralia && hasUsa) return true;
+    if (lower.includes("city") && /\b(colorado|queensland|nsw|victoria|california|new york)\b/.test(lower)) return true;
+    return false;
+  };
+
+  // retry helper (reads lastQuoteAttempt from sessionStorage)
+  const retryLastAttempt = useCallback(async () => {
+    const raw = sessionStorage.getItem("lastQuoteAttempt");
+    if (!raw) {
+      toast({ title: "No saved attempt", description: "No previous attempt found.", variant: "destructive" });
+      return;
+    }
+
+    let saved: any;
+    try {
+      saved = JSON.parse(raw);
+    } catch {
+      toast({ title: "Invalid saved attempt", description: "Saved data is corrupted.", variant: "destructive" });
+      return;
+    }
+
+    const attemptPayload = saved.sanitized || saved.payload;
+    try {
+      const resp = await quotesAPI.calculateVisitorQuote(attemptPayload);
+      // clear saved attempt on success
+      try { sessionStorage.removeItem("lastQuoteAttempt"); setHasSavedAttempt(false); } catch {}
+      navigate("/quote-result", { state: { quote: resp } });
+    } catch (err: any) {
+      toast({
+        title: "Retry failed",
+        description: err?.message || "Server error on retry",
+        variant: "destructive",
+      });
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const payload = {
+    const rawPayload = {
       pickupLocation: summaryData.raw.pickupLocation,
       deliveryLocation: summaryData.raw.deliveryLocation,
       pickupDate: summaryData.raw.pickupDate,
@@ -133,7 +223,7 @@ const QuoteStep1: React.FC = () => {
       smsConsent: formData.smsConsent,
     };
 
-    const missing = validatePayload(payload);
+    const missing = validatePayload(rawPayload);
     if (missing.length > 0) {
       toast({
         title: "Missing information",
@@ -144,30 +234,78 @@ const QuoteStep1: React.FC = () => {
       return;
     }
 
+    let sanitizedPayload: any = null;
+
     try {
-      // Call the correct backend endpoint
+      // Sanitize and normalize
+      sanitizedPayload = sanitizePayload(rawPayload);
+
+      // Heuristic check: warn user if location looks suspicious (e.g., mixes countries)
+      if (
+        looksSuspiciousLocation(sanitizedPayload.deliveryLocation) ||
+        looksSuspiciousLocation(sanitizedPayload.pickupLocation)
+      ) {
+        toast({
+          title: "Check locations",
+          description:
+            "One of your locations looks unusual (for example includes multiple country/state names). Please confirm the pickup/delivery addresses before continuing.",
+          variant: "destructive",
+        });
+        if (formContainerRef.current) formContainerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+
+      // Debug: print sanitized payload
+      console.debug("Sanitized quote payload ->", sanitizedPayload);
+
+      // Call the backend with sanitized payload
       const resp = await quotesAPI.calculateVisitorQuote({
-        pickupLocation: payload.pickupLocation,
-        deliveryLocation: payload.deliveryLocation,
-        pickupDate: payload.pickupDate,
-        brand: payload.brand,
-        model: payload.model,
-        year: payload.year,
-        email: payload.email,
-        phoneNumber: payload.phoneNumber,
+        pickupLocation: sanitizedPayload.pickupLocation,
+        deliveryLocation: sanitizedPayload.deliveryLocation,
+        pickupDate: sanitizedPayload.pickupDate,
+        brand: sanitizedPayload.brand,
+        model: sanitizedPayload.model,
+        year: sanitizedPayload.year,
+        email: sanitizedPayload.email,
+        phoneNumber: sanitizedPayload.phoneNumber,
       });
 
-      // Navigate to quote result with the returned quote
+      // Success -> clear any saved attempt and navigate to result
+      try {
+        sessionStorage.removeItem("lastQuoteAttempt");
+        setHasSavedAttempt(false);
+      } catch {}
+
       navigate("/quote-result", { state: { quote: resp } });
     } catch (err: any) {
-      const message = err?.message || "Failed to calculate quote. Please try again later.";
+      // Persist the payload and server info to sessionStorage for later retry / debugging
+      try {
+        const saved = {
+          payload: rawPayload,
+          sanitized: sanitizedPayload,
+          timestamp: new Date().toISOString(),
+          traceId: err?.traceId || null,
+          serverMessage: err?.message || null,
+        };
+        sessionStorage.setItem("lastQuoteAttempt", JSON.stringify(saved));
+        setHasSavedAttempt(true);
+      } catch (e) {
+        console.warn("Could not persist last quote attempt:", e);
+      }
+
+      // Show clearer toast and print details to console for debugging
+      const serverMsg = err?.message || "Failed to calculate quote. Please try again later.";
+      console.error("Quote API error:", { payload: rawPayload, sanitized: sanitizedPayload, error: err });
       toast({
-        title: "Error",
-        description: message,
+        title: "Server error",
+        description:
+          serverMsg +
+          (err?.traceId ? ` (trace: ${err.traceId})` : "") +
+          " — your input was saved; try again or contact support.",
         variant: "destructive",
       });
     }
-  };
+  }; // end handleSubmit
 
   // We use a constant currentStep = 1 for display
   const currentStep = 1;
@@ -280,6 +418,19 @@ const QuoteStep1: React.FC = () => {
                 >
                   Calculate Quote
                 </Button>
+
+                {/* Dev QA: Retry last failed attempt (only shown if there's a saved attempt) */}
+                {hasSavedAttempt && (
+                  <div className="mt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={retryLastAttempt}
+                      className="text-sm text-muted-foreground underline"
+                    >
+                      Retry last failed attempt
+                    </button>
+                  </div>
+                )}
               </form>
             </div>
 

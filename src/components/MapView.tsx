@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { getDirections } from "@/services/mapService";
 
+import type { DirectionsResponse } from "@/services/mapService";
+
+
+
 const MapView = ({ initialOrigin, initialDestination, onDistanceChange }: any) => {
-  const [directions, setDirections] = useState<any>(null);
+const [directions, setDirections] = useState<DirectionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

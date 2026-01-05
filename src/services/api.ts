@@ -330,24 +330,45 @@ export const carBrandsAPI = {
   },
 };
 
+// export const quotesAPI = {
+//   calculateVisitorQuote: async (data: QuoteVisitorData): Promise<QuoteVisitorResponse> => {
+//     const response = await fetch(`${BASE_URL}/quotes/visitor`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify(data),
+//     });
+
+//     const responseData = await response.json();
+
+//     if (response.ok) {
+//       return responseData; // QuoteVisitorResponse
+//     } else {
+//       throw new Error(responseData.message || responseData.error || "Failed to calculate quote");
+//     }
+//   },
+// };
+
+// Replace the existing calculateVisitorQuote implementation with this
 export const quotesAPI = {
   calculateVisitorQuote: async (data: QuoteVisitorData): Promise<QuoteVisitorResponse> => {
-    const response = await fetch(`${BASE_URL}/quotes/visitor`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+  const response = await fetch(`${BASE_URL}/quotes/visitor`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
 
-    const responseData = await response.json();
+  const text = await response.text();
+  const json = JSON.parse(text);
 
-    if (response.ok) {
-      return responseData; // QuoteVisitorResponse
-    } else {
-      throw new Error(responseData.message || responseData.error || "Failed to calculate quote");
-    }
-  },
+  if (!response.ok) {
+    throw new Error(json.message || "Failed to calculate quote");
+  }
+
+  // 🔴 FIX: return ONLY the quote
+  return json.data;
+},
 };
 
 export const contactAPI = {

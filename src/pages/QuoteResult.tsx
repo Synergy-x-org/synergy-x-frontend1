@@ -41,11 +41,18 @@ const QuoteResult = () => {
     }
 
     // Initialize quoteData directly from quoteResponse
-    setQuoteData({
-      ...quoteResponse,
-      distance: "N/A", // MapView will update this
-      duration: "N/A", // MapView will update this
-    });
+   setQuoteData({
+  ...quoteResponse,
+  vehicle: quoteResponse.vehicle ?? {
+    brand: "",
+    model: "",
+    year: 0,
+    id: "",
+  },
+  distance: "N/A",
+  duration: "N/A",
+});
+
     setIsLoading(false); // Set loading to false as quote data is available
 
   }, [location.state, navigate]);
@@ -74,6 +81,19 @@ const QuoteResult = () => {
       </div>
     );
   }
+  const rawQuote = location.state?.quote;
+const quote = rawQuote?.data ?? rawQuote;
+
+if (!quote) {
+  toast({
+    title: "Error",
+    description: "No quote data found.",
+    variant: "destructive",
+  });
+  navigate("/");
+  return;
+}
+
 
   return (
     <div className="min-h-screen bg-background">
