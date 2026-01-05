@@ -99,42 +99,6 @@ export const authAPI = {
   },
 
 
-//   otpConfirmation: async (otp: string) => {
-//     const response = await fetch(`${BASE_URL}/auth/otp/confirmation?otp=${otp}`, {
-//       method: "POST",
-//       headers: {
-//         Accept: "application/json",
-//       },
-//     });
-
-//     const responseText = await response.text();
-//     let responseData;
-
-//     try {
-//       responseData = JSON.parse(responseText);
-//     } catch {
-//       responseData = { message: responseText };
-//     }
-
-//     if (response.ok) {
-//       // ✅ Success: show backend message (e.g., "Registration Successful, proceed to login")
-//       return { message: responseData.message || "OTP verified successfully" };
-//     } else {
-//       // ✅ Handle backend-defined error messages precisely
-//       let errorMessage = responseData.message || responseData.error || "OTP verification failed";
-
-//       if (response.status === 400) {
-//         errorMessage = responseData.message || "Validation failed. Please request a new OTP.";
-//       } else if (response.status === 410) {
-//         errorMessage = responseData.message || "Your OTP has expired. A new OTP has been sent to your email.";
-//       } else if (response.status >= 500) {
-//         errorMessage = "Server error occurred. Please try again later.";
-//       }
-
-//       throw new Error(errorMessage);
-//     }
-//   },
-
 
   register: async (data: SignupData) => {
     const response = await fetch(`${BASE_URL}/auth/register`, {
@@ -170,83 +134,6 @@ export const authAPI = {
     // Handle non-OK responses (4xx, 5xx)
     throw new Error(backendMessage);  
   },
-
-
-//   forgetPassword: async (email: string) => {
-//     const response = await fetch(`${BASE_URL}/auth/forgot-password`, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify({ email }),
-//     });
-
-//     const responseText = await response.text();
-
-//     console.error("Forgot Password RAW:", responseText);
-
-//       let data;
-//       try {
-//         data = JSON.parse(responseText);
-//       } catch {
-//         throw new Error("Invalid server response");
-//       }
-
-//       if (!response.ok) {
-//         throw new Error(data.message || "Forgot password failed");
-//       }
-
-//       return data;
-//   },
-
-
-
-//   resetPassword: async (data: ResetPasswordData) => {
-//     const response = await fetch(`${BASE_URL}/auth/reset-password`, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(data),
-//     });
-
-//     const responseData = await response.json();
-
-//     if (response.ok) {
-//       return responseData; // { message: "Password reset successfully" }
-//     } else {
-//       throw new Error(responseData.message || responseData.error || "Password reset failed");
-//     }
-//   },
-
-//  resendCode: async (resetRequestId: string) => {
-//   const response = await fetch(`${BASE_URL}/auth/resend-token`, {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//     body: JSON.stringify({
-//       resetRequestId, // ✅ MUST match backend
-//     }),
-//   });
-
-//   const responseText = await response.text();
-
-//   let responseData;
-//   try {
-//     responseData = JSON.parse(responseText);
-//   } catch {
-//     throw new Error("Invalid server response");
-//   }
-
-//   if (!response.ok) {
-//     throw new Error(responseData.message || "Failed to resend OTP");
-//   }
-
-//   return responseData;
-// },
-// Updated authAPI helper (only relevant functions shown/updated)
-
 
   forgetPassword: async (email: string) => {
     const response = await fetch(`${BASE_URL}/auth/forgot-password`, {
