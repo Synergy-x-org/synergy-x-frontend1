@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import ServicesWeOffer from "@/components/ServicesWeOffer";
 import HaveQuestions from "@/components/HaveQuestions";
 import { Check } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const heroImages = [movingCostHero];
 
@@ -21,6 +21,10 @@ const MovingCostCalculator = () => {
   const [currentImage, setCurrentImage] = useState(0);
   const [currentStep] = useState(1);
   const navigate = useNavigate();
+  const location = useLocation();
+  // Read initialData passed via location.state (so Edit can prefill the form)
+  const initialData = (location.state as any)?.initialData || undefined;
+
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -96,8 +100,8 @@ const MovingCostCalculator = () => {
 
           {/* Quote Form (delegated entirely to your existing QuoteForm component) */}
            <div className="w-full max-w-md animate-fade-in">
-            {/* IMPORTANT: pass onSubmit to override default backend call on this page */}
-            <QuoteForm onSubmit={handleQuoteFormSubmit} />
+            {/* Pass initialData if present so the form pre-fills when coming back from Edit */}
+            <QuoteForm initialData={initialData} onSubmit={handleQuoteFormSubmit} />
           </div>
         </div>
 

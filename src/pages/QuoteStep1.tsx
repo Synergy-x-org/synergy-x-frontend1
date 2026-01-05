@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "@/hooks/use-toast";
 import { quotesAPI } from "@/services/api";
+import Testimonials from "@/components/Testimonials";
 
 const ContactEmail = "admin@synergyxtransportation.com";
 
@@ -24,11 +25,11 @@ const QuoteStep1: React.FC = () => {
   const location = useLocation();
   const formContainerRef = useRef<HTMLDivElement>(null);
 
-  // initialData: may come from MovingCostCalculator or other pages via navigate(..., { state: { initialData, source } })
+  // Read initialData and optional source from route state so this page can be pre-filled
   const initialData = (location.state as any)?.initialData || {};
-  const source = (location.state as any)?.source || (location.state as any)?.from || null;
+  const source = (location.state as any)?.source || null;
 
-  // Local form state for contact fields (prefill from initialData.email/phoneNumber when available)
+  // Contact form state (prefill from initialData if available)
   const [formData, setFormData] = useState({
     email: initialData.email || "",
     phoneNumber: initialData.phoneNumber || "",
@@ -36,7 +37,7 @@ const QuoteStep1: React.FC = () => {
     smsConsent: initialData.smsConsent ?? false,
   });
 
-  // Summary data derived from initialData (these are the fields that were filled on the original QuoteForm)
+  // Summary data (shown on the right) and raw values used to build the API payload
   const [summaryData, setSummaryData] = useState({
     pickupFrom: initialData.pickupLocation || initialData.pickupFrom || "—",
     deliverTo: initialData.deliveryLocation || initialData.deliverTo || "—",
@@ -44,7 +45,6 @@ const QuoteStep1: React.FC = () => {
       (initialData.brand ? `${initialData.brand} ${initialData.model || ""}` : initialData.carModel) ||
       "—",
     date: initialData.pickupDate || initialData.date || "—",
-    // Keep copies of raw fields too for submit
     raw: {
       pickupLocation: initialData.pickupLocation || initialData.pickupFrom || "",
       deliveryLocation: initialData.deliveryLocation || initialData.deliverTo || "",
@@ -55,7 +55,7 @@ const QuoteStep1: React.FC = () => {
     },
   });
 
-  // If initialData changes (route back and forth), update states
+  // Keep local state in-sync if initialData changes (e.g., when returning from edit)
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -83,19 +83,22 @@ const QuoteStep1: React.FC = () => {
     }));
   }, [initialData]);
 
+  // Edit: send the current data back to the main quote form so it can prefill and the user won't lose inputs
   const handleEditClick = useCallback(() => {
-    // Prefer routing back to the page the user came from so they can edit their previous inputs.
-    // If we have a known source or browser history, go back; otherwise navigate to moving-cost-calculator with data so it can prefill.
-    if (source === "moving-cost-calculator" || source === "landing" || window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
+    const payloadForPrefill = {
+      ...summaryData.raw,
+      email: formData.email,
+      phoneNumber: formData.phoneNumber,
+      callConsent: formData.callConsent,
+      smsConsent: formData.smsConsent,
+    };
 
-    // fallback: navigate to moving-cost-calculator and hand-off the filled values so that form is pre-filled
-    navigate("/moving-cost-calculator", { state: { initialData: { ...summaryData.raw, email: formData.email, phoneNumber: formData.phoneNumber }, source: "quote-step-1" } });
-  }, [navigate, source, summaryData, formData]);
+    // Always navigate back to the main quote form and hand off initialData so it pre-fills.
+    // This prevents losing the form state even when components unmount.
+    navigate("/moving-cost-calculator", { state: { initialData: payloadForPrefill, source: "quote-step-1" } });
+  }, [navigate, summaryData, formData]);
 
-  // Validate required fields before calling backend
+  // Validate required fields before calling the backend
   const validatePayload = (payload: any) => {
     const missing: string[] = [];
     if (!payload.pickupLocation) missing.push("Pickup location");
@@ -112,17 +115,20 @@ const QuoteStep1: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Build payload from summary raw data + contact fields
     const payload = {
       pickupLocation: summaryData.raw.pickupLocation,
       deliveryLocation: summaryData.raw.deliveryLocation,
       pickupDate: summaryData.raw.pickupDate,
       brand: summaryData.raw.brand,
       model: summaryData.raw.model,
-      year: typeof summaryData.raw.year === "string" ? (summaryData.raw.year ? parseInt(summaryData.raw.year, 10) : undefined) : summaryData.raw.year,
+      year:
+        typeof summaryData.raw.year === "string"
+          ? summaryData.raw.year
+            ? parseInt(summaryData.raw.year, 10)
+            : undefined
+          : summaryData.raw.year,
       email: formData.email,
       phoneNumber: formData.phoneNumber,
-      // consents are optional — include if you want to send but they are NOT required
       callConsent: formData.callConsent,
       smsConsent: formData.smsConsent,
     };
@@ -134,15 +140,12 @@ const QuoteStep1: React.FC = () => {
         description: `Please complete the following fields before calculating a quote: ${missing.join(", ")}`,
         variant: "destructive",
       });
-      // scroll to top of form for visibility
       if (formContainerRef.current) formContainerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
-    // All required fields present — call backend
     try {
-      // show inline loading by disabling button via state (optional)
-      // call correct endpoint (quotesAPI.calculateVisitorQuote)
+      // Call the correct backend endpoint
       const resp = await quotesAPI.calculateVisitorQuote({
         pickupLocation: payload.pickupLocation,
         deliveryLocation: payload.deliveryLocation,
@@ -154,10 +157,9 @@ const QuoteStep1: React.FC = () => {
         phoneNumber: payload.phoneNumber,
       });
 
-      // navigate to quote result with backend response
+      // Navigate to quote result with the returned quote
       navigate("/quote-result", { state: { quote: resp } });
     } catch (err: any) {
-      // Respect server messages but avoid exposing raw stack
       const message = err?.message || "Failed to calculate quote. Please try again later.";
       toast({
         title: "Error",
@@ -166,6 +168,9 @@ const QuoteStep1: React.FC = () => {
       });
     }
   };
+
+  // We use a constant currentStep = 1 for display
+  const currentStep = 1;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -181,25 +186,25 @@ const QuoteStep1: React.FC = () => {
               {/* Progress Line Active */}
               <div
                 className="absolute top-4 left-0 h-0.5 bg-primary mx-8 transition-all duration-500"
-                style={{ width: `${((1 - 1) / (steps.length - 1)) * 100}%`, maxWidth: "calc(100% - 4rem)" }}
+                style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`, maxWidth: "calc(100% - 4rem)" }}
               />
 
               {steps.map((step) => (
                 <div key={step.number} className="flex flex-col items-center relative z-10">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
-                      step.number < 1
+                      step.number < currentStep
                         ? "bg-primary text-primary-foreground"
-                        : step.number === 1
+                        : step.number === currentStep
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground border border-border"
                     }`}
                   >
-                    {step.number < 1 ? <Check className="w-4 h-4" /> : step.number}
+                    {step.number < currentStep ? <Check className="w-4 h-4" /> : step.number}
                   </div>
                   <span
                     className={`mt-2 text-xs md:text-sm font-medium whitespace-nowrap ${
-                      step.number <= 1 ? "text-foreground" : "text-muted-foreground"
+                      step.number <= currentStep ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
                     {step.label}
@@ -211,7 +216,7 @@ const QuoteStep1: React.FC = () => {
 
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {/* Left Column - Form */}
+            {/* Left Column - Contact Form */}
             <div ref={formContainerRef}>
               <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">
                 Let's Get a Quote that works for you
@@ -227,10 +232,10 @@ const QuoteStep1: React.FC = () => {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     aria-label="Email address"
+                    required
                   />
                 </div>
 
-                {/* Phone Number */}
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -240,10 +245,10 @@ const QuoteStep1: React.FC = () => {
                     value={formData.phoneNumber}
                     onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                     aria-label="Phone number"
+                    required
                   />
                 </div>
 
-                {/* Call Consent Checkbox */}
                 <div className="flex items-start space-x-3">
                   <Checkbox
                     id="callConsent"
@@ -256,7 +261,6 @@ const QuoteStep1: React.FC = () => {
                   </label>
                 </div>
 
-                {/* SMS Consent Checkbox */}
                 <div className="flex items-start space-x-3">
                   <Checkbox
                     id="smsConsent"
@@ -282,7 +286,6 @@ const QuoteStep1: React.FC = () => {
             {/* Right Column - Summary */}
             <div>
               <Card className="overflow-hidden border-0 shadow-md">
-                {/* Orange Header */}
                 <div className="bg-primary px-4 py-3 flex items-center justify-between">
                   <span className="text-primary-foreground font-semibold">Summary of Quote</span>
                   <Button
@@ -296,7 +299,6 @@ const QuoteStep1: React.FC = () => {
                   </Button>
                 </div>
 
-                {/* Summary Details */}
                 <div className="p-4 bg-background">
                   <div className="space-y-0">
                     <div className="flex justify-between items-center py-3 border-b border-border">
@@ -318,7 +320,6 @@ const QuoteStep1: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Teal Experience Info Box */}
                 <div className="bg-[hsl(175,60%,40%)] p-5">
                   <p className="text-white font-medium text-sm mb-4">
                     Our knowledgeable team has 10+ years experience
@@ -335,6 +336,8 @@ const QuoteStep1: React.FC = () => {
           </div>
         </div>
       </main>
+
+      <Testimonials />
 
       <Footer />
     </div>
