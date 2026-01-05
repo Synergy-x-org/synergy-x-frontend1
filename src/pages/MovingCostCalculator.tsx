@@ -1,25 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { carBrandsAPI, quotesAPI } from '@/services/api'; // Import carBrandsAPI and quotesAPI
-import { toast } from "@/hooks/use-toast"; // Import toast
-
+import React, { useState, useEffect } from "react";
+import QuoteForm from "@/components/QuoteForm";
 import movingCostHero from "@/assets/movingcost.png";
-import Testimonials from '@/components/Testimonials';
-import Footer from '@/components/Footer';
+import Testimonials from "@/components/Testimonials";
+import Footer from "@/components/Footer";
+import ServicesWeOffer from "@/components/ServicesWeOffer";
+import HaveQuestions from "@/components/HaveQuestions";
 import { Check } from "lucide-react";
-import QuoteForm from '@/components/QuoteForm';
-import ServicesWeOffer from '@/components/ServicesWeOffer';
-import HaveQuestions from '@/components/HaveQuestions';
+import { useNavigate } from "react-router-dom";
 
 const heroImages = [movingCostHero];
 
@@ -30,11 +17,10 @@ const steps = [
   { number: 4, label: "Finish" },
 ];
 
-
 const MovingCostCalculator = () => {
-
-   const [currentImage, setCurrentImage] = useState(0);
+  const [currentImage, setCurrentImage] = useState(0);
   const [currentStep] = useState(1);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -44,176 +30,91 @@ const MovingCostCalculator = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [carBrands, setCarBrands] = useState<string[]>([]);
-  const [carModels, setCarModels] = useState<Record<string, number[]>>({});
-  const [formData, setFormData] = useState({
-    pickupLocation: "",
-    deliveryLocation: "",
-    year: "",
-    brand: "",
-    model: "",
-    pickupDate: "",
-    email: "",
-    phoneNumber: "",
-  });
-
-  // Fetch car brands on component mount
-  useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        const fetchedBrands = await carBrandsAPI.getAllCarBrands();
-        setCarBrands(fetchedBrands);
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to fetch car brands",
-          variant: "destructive",
-        });
-      }
-    };
-    fetchBrands();
-  }, []);
-
-  // Fetch models when brand changes
-  useEffect(() => {
-    if (formData.brand) {
-      const fetchModels = async () => {
-        try {
-          const fetchedModels = await carBrandsAPI.getModelsByBrand(formData.brand);
-          setCarModels(fetchedModels);
-          setFormData((prev) => ({ ...prev, model: "", year: "" })); // Reset model and year when brand changes
-        } catch (error: any) {
-          toast({
-            title: "Error",
-            description: error.message || `Failed to fetch models for brand ${formData.brand}`,
-            variant: "destructive",
-          });
-        }
-      };
-      fetchModels();
-    } else {
-      setCarModels({});
-      setFormData((prev) => ({ ...prev, model: "", year: "" }));
-    }
-  }, [formData.brand]);
-
-  // Update available years when model changes
-  useEffect(() => {
-    if (formData.model && carModels[formData.model]) {
-      setFormData((prev) => ({ ...prev, year: "" })); // Reset year when model changes
-    }
-  }, [formData.model, carModels]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await quotesAPI.calculateVisitorQuote({
-        ...formData,
-        year: parseInt(formData.year), // Ensure year is a number
-      });
-      toast({
-        title: "Success!",
-        description: "Quote calculated successfully.",
-      });
-      navigate("/quote-result", { state: { quote: response } });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to calculate quote",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleQuoteFormSubmit = async (formValues: any) => {
+    // Navigate to QuoteStep1 and pass the filled data (no backend call here)
+    navigate("/quote-step-1", { state: { initialData: formValues } });
   };
 
   return (
     <div className="min-h-screen">
       {/* Hero Section with Calculator Form */}
       <section className="relative min-h-screen flex flex-col items-center justify-start pt-8 pb-16 overflow-hidden">
-      {/* Background Images */}
-      {heroImages.map((image, index) => (
-        <div
-          key={index}
-          className={`absolute inset-0 transition-opacity duration-1000 ${
-            index === currentImage ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <img
-            src={image}
-            alt={`Auto transport ${index + 1}`}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
-      ))}
-
-      {/* Content */}
-      <div className="container mx-auto px-4 z-10 flex flex-col items-center">
-        {/* Progress Stepper */}
-        <div className="w-full max-w-2xl mb-8 px-4">
-          <div className="flex items-center justify-between relative">
-            {/* Progress Line Background */}
-            <div className="absolute top-4 left-0 right-0 h-0.5 bg-white/30 mx-8" />
-            {/* Progress Line Active */}
-            <div 
-              className="absolute top-4 left-0 h-0.5 bg-primary mx-8 transition-all duration-500"
-              style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+        {/* Background Images */}
+        {heroImages.map((image, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-1000 ${
+              index === currentImage ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <img
+              src={image}
+              alt={`Auto transport ${index + 1}`}
+              className="w-full h-full object-cover"
             />
-            
-            {steps.map((step) => (
-              <div key={step.number} className="flex flex-col items-center relative z-10">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
-                    step.number < currentStep
-                      ? "bg-primary text-primary-foreground"
-                      : step.number === currentStep
-                      ? "bg-primary text-primary-foreground ring-4 ring-primary/30"
-                      : "bg-white/20 text-white border-2 border-white/40"
-                  }`}
-                >
-                  {step.number < currentStep ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    step.number
-                  )}
+            <div className="absolute inset-0 bg-black/40" />
+          </div>
+        ))}
+
+        {/* Content */}
+        <div className="container mx-auto px-4 z-10 flex flex-col items-center">
+          {/* Progress Stepper */}
+          <div className="w-full max-w-2xl mb-8 px-4">
+            <div className="flex items-center justify-between relative">
+              {/* Progress Line Background */}
+              <div className="absolute top-4 left-0 right-0 h-0.5 bg-white/30 mx-8" />
+              {/* Progress Line Active */}
+              <div
+                className="absolute top-4 left-0 h-0.5 bg-primary mx-8 transition-all duration-500"
+                style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+              />
+
+              {steps.map((step) => (
+                <div key={step.number} className="flex flex-col items-center relative z-10">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                      step.number < currentStep
+                        ? "bg-primary text-primary-foreground"
+                        : step.number === currentStep
+                        ? "bg-primary text-primary-foreground ring-4 ring-primary/30"
+                        : "bg-white/20 text-white border-2 border-white/40"
+                    }`}
+                  >
+                    {step.number < currentStep ? <Check className="w-4 h-4" /> : step.number}
+                  </div>
+                  <span
+                    className={`mt-2 text-xs md:text-sm font-medium whitespace-nowrap ${
+                      step.number <= currentStep ? "text-white" : "text-white/60"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
                 </div>
-                <span
-                  className={`mt-2 text-xs md:text-sm font-medium whitespace-nowrap ${
-                    step.number <= currentStep ? "text-white" : "text-white/60"
-                  }`}
-                >
-                  {step.label}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          {/* Quote Form (delegated entirely to your existing QuoteForm component) */}
+           <div className="w-full max-w-md animate-fade-in">
+            {/* IMPORTANT: pass onSubmit to override default backend call on this page */}
+            <QuoteForm onSubmit={handleQuoteFormSubmit} />
           </div>
         </div>
 
-        {/* Quote Form */}
-        <div className="w-full max-w-md animate-fade-in">
-          <QuoteForm />
+        {/* Carousel Indicators */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {heroImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentImage(index)}
+              className={`h-2 rounded-full transition-all ${
+                index === currentImage ? "w-8 bg-primary" : "w-2 bg-white/50"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
-      </div>
-
-      {/* Carousel Indicators */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-        {heroImages.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentImage(index)}
-            className={`h-2 rounded-full transition-all ${
-              index === currentImage ? "w-8 bg-primary" : "w-2 bg-white/50"
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-    </section>
+      </section>
 
       {/* How Much Does Car Shipping Cost? */}
       <section className="py-20 bg-background">
@@ -300,19 +201,17 @@ const MovingCostCalculator = () => {
 
       {/* What our customers are saying (Testimonials) */}
       <section className="py-20 bg-secondary/10">
-        <Testimonials />        
+        <Testimonials />
       </section>
       <section className="py-20 bg-secondary/10">
-      <ServicesWeOffer />
+        <ServicesWeOffer />
       </section>
       <section className="py-20 bg-secondary/10">
-      <HaveQuestions />
+        <HaveQuestions />
       </section>
       <section className="py-10 bg-secondary/5">
-      <Footer />
+        <Footer />
       </section>
-      
-
     </div>
   );
 };

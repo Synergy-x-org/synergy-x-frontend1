@@ -1,0 +1,344 @@
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card } from "@/components/ui/card";
+import { Mail, Phone, Pencil, Check } from "lucide-react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { toast } from "@/hooks/use-toast";
+import { quotesAPI } from "@/services/api";
+
+const ContactEmail = "admin@synergyxtransportation.com";
+
+const steps = [
+  { number: 1, label: "Calculate shipping" },
+  { number: 2, label: "Price" },
+  { number: 3, label: "Confirmation" },
+  { number: 4, label: "Finish" },
+];
+
+const QuoteStep1: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const formContainerRef = useRef<HTMLDivElement>(null);
+
+  // initialData: may come from MovingCostCalculator or other pages via navigate(..., { state: { initialData, source } })
+  const initialData = (location.state as any)?.initialData || {};
+  const source = (location.state as any)?.source || (location.state as any)?.from || null;
+
+  // Local form state for contact fields (prefill from initialData.email/phoneNumber when available)
+  const [formData, setFormData] = useState({
+    email: initialData.email || "",
+    phoneNumber: initialData.phoneNumber || "",
+    callConsent: initialData.callConsent ?? false,
+    smsConsent: initialData.smsConsent ?? false,
+  });
+
+  // Summary data derived from initialData (these are the fields that were filled on the original QuoteForm)
+  const [summaryData, setSummaryData] = useState({
+    pickupFrom: initialData.pickupLocation || initialData.pickupFrom || "—",
+    deliverTo: initialData.deliveryLocation || initialData.deliverTo || "—",
+    carModel:
+      (initialData.brand ? `${initialData.brand} ${initialData.model || ""}` : initialData.carModel) ||
+      "—",
+    date: initialData.pickupDate || initialData.date || "—",
+    // Keep copies of raw fields too for submit
+    raw: {
+      pickupLocation: initialData.pickupLocation || initialData.pickupFrom || "",
+      deliveryLocation: initialData.deliveryLocation || initialData.deliverTo || "",
+      brand: initialData.brand || initialData.vehicle?.brand || "",
+      model: initialData.model || initialData.vehicle?.model || "",
+      year: initialData.year || initialData.vehicle?.year || "",
+      pickupDate: initialData.pickupDate || initialData.date || "",
+    },
+  });
+
+  // If initialData changes (route back and forth), update states
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      email: initialData.email || prev.email || "",
+      phoneNumber: initialData.phoneNumber || prev.phoneNumber || "",
+      callConsent: initialData.callConsent ?? prev.callConsent,
+      smsConsent: initialData.smsConsent ?? prev.smsConsent,
+    }));
+
+    setSummaryData((prev) => ({
+      ...prev,
+      pickupFrom: initialData.pickupLocation || prev.pickupFrom || "—",
+      deliverTo: initialData.deliveryLocation || prev.deliverTo || "—",
+      carModel:
+        (initialData.brand ? `${initialData.brand} ${initialData.model || ""}` : prev.carModel) || "—",
+      date: initialData.pickupDate || prev.date || "—",
+      raw: {
+        pickupLocation: initialData.pickupLocation || prev.raw.pickupLocation || "",
+        deliveryLocation: initialData.deliveryLocation || prev.raw.deliveryLocation || "",
+        brand: initialData.brand || prev.raw.brand || "",
+        model: initialData.model || prev.raw.model || "",
+        year: initialData.year || prev.raw.year || "",
+        pickupDate: initialData.pickupDate || prev.raw.pickupDate || "",
+      },
+    }));
+  }, [initialData]);
+
+  const handleEditClick = useCallback(() => {
+    // Prefer routing back to the page the user came from so they can edit their previous inputs.
+    // If we have a known source or browser history, go back; otherwise navigate to moving-cost-calculator with data so it can prefill.
+    if (source === "moving-cost-calculator" || source === "landing" || window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    // fallback: navigate to moving-cost-calculator and hand-off the filled values so that form is pre-filled
+    navigate("/moving-cost-calculator", { state: { initialData: { ...summaryData.raw, email: formData.email, phoneNumber: formData.phoneNumber }, source: "quote-step-1" } });
+  }, [navigate, source, summaryData, formData]);
+
+  // Validate required fields before calling backend
+  const validatePayload = (payload: any) => {
+    const missing: string[] = [];
+    if (!payload.pickupLocation) missing.push("Pickup location");
+    if (!payload.deliveryLocation) missing.push("Delivery location");
+    if (!payload.brand) missing.push("Car brand");
+    if (!payload.model) missing.push("Car model");
+    if (!payload.year && payload.year !== 0) missing.push("Car year");
+    if (!payload.pickupDate) missing.push("Date");
+    if (!payload.email) missing.push("Email");
+    if (!payload.phoneNumber) missing.push("Phone number");
+    return missing;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Build payload from summary raw data + contact fields
+    const payload = {
+      pickupLocation: summaryData.raw.pickupLocation,
+      deliveryLocation: summaryData.raw.deliveryLocation,
+      pickupDate: summaryData.raw.pickupDate,
+      brand: summaryData.raw.brand,
+      model: summaryData.raw.model,
+      year: typeof summaryData.raw.year === "string" ? (summaryData.raw.year ? parseInt(summaryData.raw.year, 10) : undefined) : summaryData.raw.year,
+      email: formData.email,
+      phoneNumber: formData.phoneNumber,
+      // consents are optional — include if you want to send but they are NOT required
+      callConsent: formData.callConsent,
+      smsConsent: formData.smsConsent,
+    };
+
+    const missing = validatePayload(payload);
+    if (missing.length > 0) {
+      toast({
+        title: "Missing information",
+        description: `Please complete the following fields before calculating a quote: ${missing.join(", ")}`,
+        variant: "destructive",
+      });
+      // scroll to top of form for visibility
+      if (formContainerRef.current) formContainerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    // All required fields present — call backend
+    try {
+      // show inline loading by disabling button via state (optional)
+      // call correct endpoint (quotesAPI.calculateVisitorQuote)
+      const resp = await quotesAPI.calculateVisitorQuote({
+        pickupLocation: payload.pickupLocation,
+        deliveryLocation: payload.deliveryLocation,
+        pickupDate: payload.pickupDate,
+        brand: payload.brand,
+        model: payload.model,
+        year: payload.year,
+        email: payload.email,
+        phoneNumber: payload.phoneNumber,
+      });
+
+      // navigate to quote result with backend response
+      navigate("/quote-result", { state: { quote: resp } });
+    } catch (err: any) {
+      // Respect server messages but avoid exposing raw stack
+      const message = err?.message || "Failed to calculate quote. Please try again later.";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
+
+      <main className="flex-1 py-8 md:py-12">
+        <div className="container mx-auto px-4">
+          {/* Progress Stepper */}
+          <div className="w-full max-w-3xl mx-auto mb-10 md:mb-14">
+            <div className="flex items-center justify-between relative">
+              {/* Progress Line Background */}
+              <div className="absolute top-4 left-0 right-0 h-0.5 bg-border mx-8" />
+              {/* Progress Line Active */}
+              <div
+                className="absolute top-4 left-0 h-0.5 bg-primary mx-8 transition-all duration-500"
+                style={{ width: `${((1 - 1) / (steps.length - 1)) * 100}%`, maxWidth: "calc(100% - 4rem)" }}
+              />
+
+              {steps.map((step) => (
+                <div key={step.number} className="flex flex-col items-center relative z-10">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                      step.number < 1
+                        ? "bg-primary text-primary-foreground"
+                        : step.number === 1
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground border border-border"
+                    }`}
+                  >
+                    {step.number < 1 ? <Check className="w-4 h-4" /> : step.number}
+                  </div>
+                  <span
+                    className={`mt-2 text-xs md:text-sm font-medium whitespace-nowrap ${
+                      step.number <= 1 ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {/* Left Column - Form */}
+            <div ref={formContainerRef}>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">
+                Let's Get a Quote that works for you
+              </h2>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    className="pl-10 h-12 bg-background border-input"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    aria-label="Email address"
+                  />
+                </div>
+
+                {/* Phone Number */}
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="tel"
+                    placeholder="Phone Number"
+                    className="pl-10 h-12 bg-background border-input"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    aria-label="Phone number"
+                  />
+                </div>
+
+                {/* Call Consent Checkbox */}
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="callConsent"
+                    checked={formData.callConsent}
+                    onCheckedChange={(checked) => setFormData({ ...formData, callConsent: checked as boolean })}
+                    className="mt-1"
+                  />
+                  <label htmlFor="callConsent" className="text-xs text-muted-foreground leading-relaxed">
+                    By checking this box, you expressly authorize Synergy X to call you, either manually or through an automated system. Your agreement to receive calls from Synergy X is not a condition of this transaction. You are to opt out of receiving calls at any time by emailing admin@synergyxtransportation.com
+                  </label>
+                </div>
+
+                {/* SMS Consent Checkbox */}
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="smsConsent"
+                    checked={formData.smsConsent}
+                    onCheckedChange={(checked) => setFormData({ ...formData, smsConsent: checked as boolean })}
+                    className="mt-1"
+                  />
+                  <label htmlFor="smsConsent" className="text-xs text-muted-foreground leading-relaxed">
+                    By checking this box, I agree to receive SMS about promotions or offers from SynergyX at the number provided. Your agreement to receive SMS messaging from Synergy X, is not a condition of this transaction. You are able to opt-out of such messaging at any time by replying "STOP". Reply "HELP" for assistance. Message frequency may vary. Message and data rates may apply.
+                  </label>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 text-base font-semibold mt-4"
+                  size="lg"
+                >
+                  Calculate Quote
+                </Button>
+              </form>
+            </div>
+
+            {/* Right Column - Summary */}
+            <div>
+              <Card className="overflow-hidden border-0 shadow-md">
+                {/* Orange Header */}
+                <div className="bg-primary px-4 py-3 flex items-center justify-between">
+                  <span className="text-primary-foreground font-semibold">Summary of Quote</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary-foreground hover:bg-primary-foreground/20 h-8 px-3 gap-1"
+                    onClick={handleEditClick}
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Edit
+                  </Button>
+                </div>
+
+                {/* Summary Details */}
+                <div className="p-4 bg-background">
+                  <div className="space-y-0">
+                    <div className="flex justify-between items-center py-3 border-b border-border">
+                      <span className="text-muted-foreground text-sm">Pickup from</span>
+                      <span className="text-foreground font-medium">{summaryData.pickupFrom}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b border-border">
+                      <span className="text-muted-foreground text-sm">Deliver to</span>
+                      <span className="text-foreground font-medium">{summaryData.deliverTo}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b border-border">
+                      <span className="text-muted-foreground text-sm">Car Model</span>
+                      <span className="text-foreground font-medium">{summaryData.carModel}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3">
+                      <span className="text-muted-foreground text-sm">Date</span>
+                      <span className="text-foreground font-medium">{summaryData.date}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Teal Experience Info Box */}
+                <div className="bg-[hsl(175,60%,40%)] p-5">
+                  <p className="text-white font-medium text-sm mb-4">
+                    Our knowledgeable team has 10+ years experience
+                  </p>
+                  <a
+                    href={`mailto:${ContactEmail}`}
+                    className="inline-block bg-white text-foreground px-5 py-2.5 rounded text-sm font-medium hover:bg-white/90 transition-colors"
+                  >
+                    {ContactEmail}
+                  </a>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default QuoteStep1;
