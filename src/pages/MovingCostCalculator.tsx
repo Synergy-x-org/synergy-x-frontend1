@@ -16,8 +16,34 @@ import { toast } from "@/hooks/use-toast"; // Import toast
 import movingCostHero from "@/assets/movingcost.png";
 import Testimonials from '@/components/Testimonials';
 import Footer from '@/components/Footer';
+import { Check } from "lucide-react";
+import QuoteForm from '@/components/QuoteForm';
+import ServicesWeOffer from '@/components/ServicesWeOffer';
+import HaveQuestions from '@/components/HaveQuestions';
+
+const heroImages = [movingCostHero];
+
+const steps = [
+  { number: 1, label: "Calculate shipping" },
+  { number: 2, label: "Price" },
+  { number: 3, label: "Confirmation" },
+  { number: 4, label: "Finish" },
+];
+
 
 const MovingCostCalculator = () => {
+
+   const [currentImage, setCurrentImage] = useState(0);
+  const [currentStep] = useState(1);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentImage((prev) => (prev + 1) % heroImages.length);
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [carBrands, setCarBrands] = useState<string[]>([]);
@@ -108,135 +134,86 @@ const MovingCostCalculator = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section with Calculator Form */}
-      <section 
-        className="relative bg-cover bg-center py-32 text-white"
-        style={{ backgroundImage: `url(${movingCostHero})` }} // User-provided image from assets
-      >
-        {/* Removed overlay div */}
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4">Calculate your car shipping cost</h1>
-          <div className="max-w-md mx-auto mt-8">
-            <Card className="shadow-lg bg-white text-gray-800">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold text-center">Calculate your car shipping cost</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="pickupLocation" className="block text-sm font-medium text-gray-700">Location</label>
-                      <Input
-                        id="pickupLocation"
-                        type="text"
-                        placeholder="Enter pickup location"
-                        value={formData.pickupLocation}
-                        onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="deliveryLocation" className="block text-sm font-medium text-gray-700">Destination</label>
-                      <Input
-                        id="deliveryLocation"
-                        type="text"
-                        placeholder="Enter delivery destination"
-                        value={formData.deliveryLocation}
-                        onChange={(e) => setFormData({ ...formData, deliveryLocation: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Car Brand</label>
-                      <Select
-                        value={formData.brand}
-                        onValueChange={(value) => setFormData({ ...formData, brand: value })}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Car Brand" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {carBrands.map((brand) => (
-                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label htmlFor="model" className="block text-sm font-medium text-gray-700">Car Model</label>
-                      <Select
-                        value={formData.model}
-                        onValueChange={(value) => setFormData({ ...formData, model: value })}
-                        disabled={!formData.brand}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Car Model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.keys(carModels).map((model) => (
-                            <SelectItem key={model} value={model}>{model}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label htmlFor="year" className="block text-sm font-medium text-gray-700">Year</label>
-                      <Select
-                        value={formData.year}
-                        onValueChange={(value) => setFormData({ ...formData, year: value })}
-                        disabled={!formData.model}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formData.model && carModels[formData.model]?.map((year) => (
-                            <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label htmlFor="pickupDate" className="block text-sm font-medium text-gray-700">Pickup Date</label>
-                      <Input
-                        id="pickupDate"
-                        type="date"
-                        value={formData.pickupDate}
-                        onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                      <Input
-                        id="phoneNumber"
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        value={formData.phoneNumber}
-                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
-                    {loading ? "Calculating..." : "Calculate Quote"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+      <section className="relative min-h-screen flex flex-col items-center justify-start pt-8 pb-16 overflow-hidden">
+      {/* Background Images */}
+      {heroImages.map((image, index) => (
+        <div
+          key={index}
+          className={`absolute inset-0 transition-opacity duration-1000 ${
+            index === currentImage ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <img
+            src={image}
+            alt={`Auto transport ${index + 1}`}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+      ))}
+
+      {/* Content */}
+      <div className="container mx-auto px-4 z-10 flex flex-col items-center">
+        {/* Progress Stepper */}
+        <div className="w-full max-w-2xl mb-8 px-4">
+          <div className="flex items-center justify-between relative">
+            {/* Progress Line Background */}
+            <div className="absolute top-4 left-0 right-0 h-0.5 bg-white/30 mx-8" />
+            {/* Progress Line Active */}
+            <div 
+              className="absolute top-4 left-0 h-0.5 bg-primary mx-8 transition-all duration-500"
+              style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+            />
+            
+            {steps.map((step) => (
+              <div key={step.number} className="flex flex-col items-center relative z-10">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                    step.number < currentStep
+                      ? "bg-primary text-primary-foreground"
+                      : step.number === currentStep
+                      ? "bg-primary text-primary-foreground ring-4 ring-primary/30"
+                      : "bg-white/20 text-white border-2 border-white/40"
+                  }`}
+                >
+                  {step.number < currentStep ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    step.number
+                  )}
+                </div>
+                <span
+                  className={`mt-2 text-xs md:text-sm font-medium whitespace-nowrap ${
+                    step.number <= currentStep ? "text-white" : "text-white/60"
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
+
+        {/* Quote Form */}
+        <div className="w-full max-w-md animate-fade-in">
+          <QuoteForm />
+        </div>
+      </div>
+
+      {/* Carousel Indicators */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        {heroImages.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentImage(index)}
+            className={`h-2 rounded-full transition-all ${
+              index === currentImage ? "w-8 bg-primary" : "w-2 bg-white/50"
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
+      </div>
+    </section>
 
       {/* How Much Does Car Shipping Cost? */}
       <section className="py-20 bg-background">
@@ -323,9 +300,19 @@ const MovingCostCalculator = () => {
 
       {/* What our customers are saying (Testimonials) */}
       <section className="py-20 bg-secondary/10">
-        <Testimonials />
-        <Footer />
+        <Testimonials />        
       </section>
+      <section className="py-20 bg-secondary/10">
+      <ServicesWeOffer />
+      </section>
+      <section className="py-20 bg-secondary/10">
+      <HaveQuestions />
+      </section>
+      <section className="py-10 bg-secondary/5">
+      <Footer />
+      </section>
+      
+
     </div>
   );
 };

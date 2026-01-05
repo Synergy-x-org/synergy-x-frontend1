@@ -367,13 +367,13 @@ const ShippingQuote = () => {
                   </Button>
                 </form>
               </div>
-              <div className="md:w-1/2">
+              {/* <div className="md:w-1/2">
                 <MapView
                   onOriginChange={(origin) => setFormData((prev) => ({ ...prev, pickupLocation: origin }))}
                   onDestinationChange={(destination) => setFormData((prev) => ({ ...prev, deliveryLocation: destination }))}
                   onDistanceChange={(distance) => console.log("Distance:", distance)} // You can use this to update a state if needed
                 />
-              </div>
+              </div> */}
             </div>
 
             <p className="text-center text-sm text-muted-foreground mt-6">
