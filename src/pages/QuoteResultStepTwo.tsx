@@ -98,6 +98,60 @@ if (!quote) {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      <div className="w-full border-b bg-white">
+  <div className="container mx-auto px-4 py-6 pt-28">
+    <div className="flex items-center justify-between max-w-5xl mx-auto">
+      
+      {/* Step 1 */}
+      <div className="flex flex-col items-center flex-1">
+        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+          1
+        </div>
+        <span className="text-sm mt-2 text-primary font-medium">
+          Calculate shipping
+        </span>
+      </div>
+
+      <div className="flex-1 h-px bg-primary mx-2" />
+
+      {/* Step 2 – ACTIVE */}
+      <div className="flex flex-col items-center flex-1">
+        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+          2
+        </div>
+        <span className="text-sm mt-2 text-primary font-medium">
+          Pricing
+        </span>
+      </div>
+
+      <div className="flex-1 h-px bg-muted mx-2" />
+
+      {/* Step 3 */}
+      <div className="flex flex-col items-center flex-1">
+        <div className="w-8 h-8 rounded-full border-2 border-muted text-muted-foreground flex items-center justify-center font-semibold">
+          3
+        </div>
+        <span className="text-sm mt-2 text-muted-foreground">
+          Confirmation
+        </span>
+      </div>
+
+      <div className="flex-1 h-px bg-muted mx-2" />
+
+      {/* Step 4 */}
+      <div className="flex flex-col items-center flex-1">
+        <div className="w-8 h-8 rounded-full border-2 border-muted text-muted-foreground flex items-center justify-center font-semibold">
+          4
+        </div>
+        <span className="text-sm mt-2 text-muted-foreground">
+          Finish
+        </span>
+      </div>
+
+    </div>
+  </div>
+</div>
       
       <main className="container mx-auto px-4 py-8 pt-32">
         <div className="max-w-7xl mx-auto">

@@ -23,6 +23,7 @@ import QuoteResult from "./pages/QuoteResult";
 import MovingCostCalculator from "./pages/MovingCostCalculator";
 import QuoteStep1 from "./pages/QuoteStep1";
 import NotFound from "./pages/NotFound";
+import QuoteResultStepTwo from "./pages/QuoteResultStepTwo";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
 
           {/* NEW: Quote Step 1 (review + submit) */}
           <Route path="/quote-step-1" element={<QuoteStep1 />} />
+          <Route path="/quote-result-step-two" element={<QuoteResultStepTwo />} />
 
           <Route path="/contact" element={<Contact />} />
           <Route path="/moving-cost-calculator" element={<MovingCostCalculator />} />

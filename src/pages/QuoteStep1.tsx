@@ -192,7 +192,7 @@ const QuoteStep1: React.FC = () => {
       const resp = await quotesAPI.calculateVisitorQuote(attemptPayload);
       // clear saved attempt on success
       try { sessionStorage.removeItem("lastQuoteAttempt"); setHasSavedAttempt(false); } catch {}
-      navigate("/quote-result", { state: { quote: resp } });
+      navigate("/quote-result-step-two", { state: { quote: resp } });
     } catch (err: any) {
       toast({
         title: "Retry failed",
@@ -276,7 +276,7 @@ const QuoteStep1: React.FC = () => {
         setHasSavedAttempt(false);
       } catch {}
 
-      navigate("/quote-result", { state: { quote: resp } });
+      navigate("/quote-result-step-two", { state: { quote: resp } });
     } catch (err: any) {
       // Persist the payload and server info to sessionStorage for later retry / debugging
       try {
