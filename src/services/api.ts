@@ -66,6 +66,7 @@ export interface GetInTouchData {
 }
 
 export const authAPI = {
+  
   login: async (data: LoginData) => {
     const response = await fetch(`${BASE_URL}/auth/login`, {
       method: "POST",

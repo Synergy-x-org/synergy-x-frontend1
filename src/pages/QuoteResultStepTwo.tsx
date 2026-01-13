@@ -266,31 +266,31 @@ if (!quote) {
 
             {/* Right Column - Map and Contact */}
             <div className="space-y-6">
-              {/* Route Header */}
-              <div className="flex items-center justify-center gap-4 text-lg font-semibold">
-                <span className="bg-primary text-white px-4 py-2 rounded-lg">
-                  {quoteData.pickupLocation}
+            <div className="flex items-center justify-center gap-4">
+              <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
+                {quoteData.pickupLocation}
+              </span>
+
+              <div className="flex items-center gap-3 flex-1 max-w-[260px]">
+                <div className="flex-1 border-t-2 border-dashed" />
+                <span className="text-sm font-semibold text-muted-foreground">
+                  {mapDistance}
                 </span>
-                <div className="flex-1 border-t-2 border-dashed border-muted-foreground max-w-[200px]" />
-                {/* Removed MapPin here as it's handled by MapView */}
-                <span className="text-muted-foreground">{mapDistance || quoteData.distance}</span> {/* Display distance from map API */}
-                {/* Removed MapPin here as it's handled by MapView */}
-                <div className="flex-1 border-t-2 border-dashed border-muted-foreground max-w-[200px]" />
-                <span className="bg-primary text-white px-4 py-2 rounded-lg">
-                  {quoteData.deliveryLocation}
-                </span>
+                <div className="flex-1 border-t-2 border-dashed" />
               </div>
 
-              {/* Map Container */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
-                <div className="w-full h-[500px] bg-muted flex items-center justify-center">
-                  <MapView
-                    initialOrigin={quoteData.pickupLocation}
-                    initialDestination={quoteData.deliveryLocation}
-                    onDistanceChange={setMapDistance} // Pass callback to update distance
-                  />
-                </div>
-              </div>
+              <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
+                {quoteData.deliveryLocation}
+              </span>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow overflow-hidden h-[420px]">
+              <MapView
+                initialOrigin={quoteData.pickupLocation}
+                initialDestination={quoteData.deliveryLocation}
+                onDistanceChange={setMapDistance}
+              />
+            </div>
 
               {/* Contact Box */}
               <div className="bg-primary text-white p-6 rounded-lg shadow-lg flex items-center gap-4">
@@ -327,3 +327,163 @@ if (!quote) {
 };
 
 export default QuoteResultStepTwo;
+
+
+
+// import { useEffect, useState } from "react";
+// import { useNavigate, useLocation } from "react-router-dom";
+// import { Button } from "@/components/ui/button";
+// import { X } from "lucide-react";
+// import Header from "@/components/Header";
+// import Footer from "@/components/Footer";
+// import LoadingState from "@/components/LoadingState";
+// import { QuoteVisitorResponse } from "@/services/api";
+// import { toast } from "@/hooks/use-toast";
+// import MapView from "@/components/MapView";
+
+// interface QuoteData extends QuoteVisitorResponse {
+//   distance: string;
+//   duration: string;
+// }
+
+// const QuoteResultStepTwo = () => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
+//   const [mapDistance, setMapDistance] = useState<string>("—");
+
+//   useEffect(() => {
+//     const quoteResponse: QuoteVisitorResponse | undefined =
+//       location.state?.quote?.data ?? location.state?.quote;
+
+//     if (!quoteResponse) {
+//       toast({
+//         title: "Error",
+//         description: "No quote data found. Please calculate a new quote.",
+//         variant: "destructive",
+//       });
+//       navigate("/");
+//       return;
+//     }
+
+//     setQuoteData({
+//       ...quoteResponse,
+//       vehicle: quoteResponse.vehicle ?? {
+//         brand: "",
+//         model: "",
+//         year: 0,
+//         id: "",
+//       },
+//       distance: "N/A",
+//       duration: "N/A",
+//     });
+
+//     setIsLoading(false);
+//   }, [location.state, navigate]);
+
+//   if (isLoading) {
+//     return <LoadingState message="Calculating your quote, please wait..." />;
+//   }
+
+//   if (!quoteData) {
+//     return null;
+//   }
+
+//   return (
+//     <div className="min-h-screen bg-background">
+//       <Header />
+
+//       <main className="container mx-auto px-4 py-32">
+//         <button
+//           onClick={() => navigate("/")}
+//           className="absolute top-32 right-8 p-2 hover:bg-secondary rounded-full"
+//         >
+//           <X className="h-6 w-6" />
+//         </button>
+
+//         <div className="grid lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+
+//           {/* LEFT COLUMN */}
+//           <div className="space-y-6">
+//             <div className="bg-primary text-white p-6 rounded-lg">
+//               <h1 className="text-2xl font-bold">
+//                 Quote {quoteData.quoteReference}
+//               </h1>
+//             </div>
+
+//             <div className="bg-white p-6 rounded-lg shadow space-y-3">
+//               <div className="flex justify-between">
+//                 <span className="text-muted-foreground">Pickup</span>
+//                 <span className="font-semibold">
+//                   {quoteData.pickupLocation}
+//                 </span>
+//               </div>
+//               <div className="flex justify-between">
+//                 <span className="text-muted-foreground">Delivery</span>
+//                 <span className="font-semibold">
+//                   {quoteData.deliveryLocation}
+//                 </span>
+//               </div>
+//               <div className="flex justify-between">
+//                 <span className="text-muted-foreground">Vehicle</span>
+//                 <span className="font-semibold">
+//                   {quoteData.vehicle.brand} {quoteData.vehicle.model}{" "}
+//                   {quoteData.vehicle.year}
+//                 </span>
+//               </div>
+//             </div>
+
+//             <Button className="w-full py-6 text-lg">Get Started</Button>
+//           </div>
+
+//           {/* RIGHT COLUMN */}
+//           <div className="space-y-6">
+//             <div className="flex items-center justify-center gap-4">
+//               <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
+//                 {quoteData.pickupLocation}
+//               </span>
+
+//               <div className="flex items-center gap-3 flex-1 max-w-[260px]">
+//                 <div className="flex-1 border-t-2 border-dashed" />
+//                 <span className="text-sm font-semibold text-muted-foreground">
+//                   {mapDistance}
+//                 </span>
+//                 <div className="flex-1 border-t-2 border-dashed" />
+//               </div>
+
+//               <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
+//                 {quoteData.deliveryLocation}
+//               </span>
+//             </div>
+
+//             <div className="bg-white rounded-2xl shadow overflow-hidden h-[420px]">
+//               <MapView
+//                 initialOrigin={quoteData.pickupLocation}
+//                 initialDestination={quoteData.deliveryLocation}
+//                 onDistanceChange={setMapDistance}
+//               />
+//             </div>
+
+//             <div className="bg-primary text-white p-6 rounded-lg">
+//               <p className="text-sm mb-2">
+//                 Speak to Synergy X experts about your shipment.
+//               </p>
+//               <a
+//                 href="mailto:admin@synergyxtransportation.com"
+//                 className="font-semibold underline"
+//               >
+//                 admin@synergyxtransportation.com
+//               </a>
+//             </div>
+//           </div>
+//         </div>
+//       </main>
+
+//       <Footer />
+//     </div>
+//   );
+// };
+
+// export default QuoteResultStepTwo;

@@ -1,52 +1,125 @@
+// import axios from "axios";
+
+// const BASE_URL = "https://synergy-x-transportation-backend.onrender.com/api/v1";
+
+// export const getAutocomplete = async (input: string) => {
+//   const res = await fetch(`${BASE_URL}/maps/autocomplete?input=${input}`);
+//   if (!res.ok) {
+//     const errorText = await res.text();
+//     throw new Error(`Failed to fetch location suggestions: ${res.status} ${res.statusText}. Response: ${errorText}`);
+//   }
+//   return res.json();
+// };
+
+
+
+
+import axios from "axios";
+
 const BASE_URL = "https://synergy-x-transportation-backend.onrender.com/api/v1";
 
+/* ----------------------------------
+   AUTOCOMPLETE
+----------------------------------- */
 export const getAutocomplete = async (input: string) => {
-  const res = await fetch(`${BASE_URL}/maps/autocomplete?input=${input}`);
+  const res = await fetch(
+    `${BASE_URL}/maps/autocomplete?input=${encodeURIComponent(input)}`
+  );
+
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`Failed to fetch location suggestions: ${res.status} ${res.statusText}. Response: ${errorText}`);
+    throw new Error(
+      `Failed to fetch location suggestions: ${res.status} ${res.statusText}. Response: ${errorText}`
+    );
   }
+
   return res.json();
 };
 
-// export const getDirections = async (origin: string, destination: string) => {
-//   const url = `${BASE_URL}/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
-//   const response = await fetch(url);
-
-//   const text = await response.text(); // get raw text
-//   console.log("Directions API raw response:", text);
-
-//   return text; // temporary
-// };
+/* ----------------------------------
+   DIRECTIONS
+----------------------------------- */
 export interface DirectionsResponse {
   distance: string;
   duration: string;
+  mapUrl: string;
 }
 
 export const getDirections = async (
   origin: string,
   destination: string
 ): Promise<DirectionsResponse> => {
-  const response = await fetch(
-    `${BASE_URL}/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`
+  const response = await axios.get<DirectionsResponse>(
+    `${BASE_URL}/maps/directions`,
+    {
+      params: {
+        origin,
+        destination,
+      },
+    }
   );
 
-  const text = await response.text();
-
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    console.error("Non-JSON response:", text);
-    throw new Error("Invalid directions response from server");
-  }
-
-  if (!response.ok) {
-    throw new Error(data?.message || "Failed to fetch directions");
-  }
-
-  return data;
+  // response.data is NOW properly typed ✅
+  return response.data;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// export interface DirectionsResponse {
+//   distance: string;
+//   duration: string;
+// }
+
+// export const getDirections = async (
+//   origin: string,
+//   destination: string
+// ): Promise<DirectionsResponse> => {
+//   const response = await fetch(
+//     `${BASE_URL}/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`
+//   );
+
+//   const text = await response.text();
+
+//   let data;
+//   try {
+//     data = JSON.parse(text);
+//   } catch {
+//     console.error("Non-JSON response:", text);
+//     throw new Error("Invalid directions response from server");
+//   }
+
+//   if (!response.ok) {
+//     throw new Error(data?.message || "Failed to fetch directions");
+//   }
+
+//   return data;
+// };
 
 
 

@@ -24,11 +24,13 @@ import MovingCostCalculator from "./pages/MovingCostCalculator";
 import QuoteStep1 from "./pages/QuoteStep1";
 import NotFound from "./pages/NotFound";
 import QuoteResultStepTwo from "./pages/QuoteResultStepTwo";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <AuthProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -60,6 +62,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

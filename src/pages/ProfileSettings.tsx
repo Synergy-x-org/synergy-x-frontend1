@@ -12,11 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 const ProfileSettings = () => {
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  
-  // TODO: Fetch complete user profile data from backend
-  // Endpoint: GET ${BASE_URL}/api/v1/users/profile
-  // Expected response: { firstName, lastName, email, phoneNumber, currentAddress, permanentAddress, postalCode, city }
-  
+    
   const [formData, setFormData] = useState({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
@@ -31,7 +27,6 @@ const ProfileSettings = () => {
     city: "",
   });
 
-  // Update form when user data changes
   useEffect(() => {
     if (user) {
       setFormData(prev => ({

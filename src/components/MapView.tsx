@@ -1,47 +1,91 @@
-import { useEffect, useState } from "react";
-import { getDirections } from "@/services/mapService";
+// import { useEffect, useState } from "react";
+// import { getDirections } from "@/services/mapService";
+// import type { DirectionsResponse } from "@/services/mapService";
 
-import type { DirectionsResponse } from "@/services/mapService";
+// interface Props {
+//   initialOrigin: string;
+//   initialDestination: string;
+//   onDistanceChange?: (distance: string) => void;
+// }
+
+// const MapView = ({
+//   initialOrigin,
+//   initialDestination,
+//   onDistanceChange,
+// }: Props) => {
+//   const [mapUrl, setMapUrl] = useState<string | null>(null);
+//   const [error, setError] = useState<string | null>(null);
+
+//   useEffect(() => {
+//     const fetchDirections = async () => {
+//       try {
+//         const data = await getDirections(initialOrigin, initialDestination);
+
+//         if (data.distance && onDistanceChange) {
+//           onDistanceChange(data.distance);
+//         }
+
+//         // 👇 IMPORTANT: backend must return a usable map url
+//         setMapUrl(data.mapUrl);
+//       } catch (err: any) {
+//         setError(err.message);
+//       }
+//     };
+
+//     if (initialOrigin && initialDestination) {
+//       fetchDirections();
+//     }
+//   }, [initialOrigin, initialDestination]);
+
+//   if (error) {
+//     return (
+//       <div className="flex items-center justify-center h-full text-red-500">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   if (!mapUrl) {
+//     return (
+//       <div className="flex items-center justify-center h-full text-muted-foreground">
+//         Loading map...
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <iframe
+//       src={mapUrl}
+//       className="w-full h-full rounded-2xl"
+//       loading="lazy"
+//       referrerPolicy="no-referrer-when-downgrade"
+//     />
+//   );
+// };
+
+// export default MapView;
 
 
+import React from "react";
 
-const MapView = ({ initialOrigin, initialDestination, onDistanceChange }: any) => {
-const [directions, setDirections] = useState<DirectionsResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+interface Props {
+  initialOrigin: string;
+  initialDestination: string;
+}
 
-  useEffect(() => {
-    const fetchDirections = async () => {
-      try {
-        const data = await getDirections(initialOrigin, initialDestination);
-        setDirections(data);
-        if (data?.distance) onDistanceChange(data.distance);
-      } catch (err: any) {
-        setError(err.message);
-      }
-    };
-    if (initialOrigin && initialDestination) fetchDirections();
-  }, [initialOrigin, initialDestination]);
+const MapView = ({ initialOrigin, initialDestination }: Props) => {
+  const mapUrl = `https://synergy-x-transportation-backend.onrender.com/api/v1/maps/directions?origin=${encodeURIComponent(
+    initialOrigin
+  )}&destination=${encodeURIComponent(initialDestination)}`;
 
   return (
-    <div className="w-full h-[400px] relative">
-      {error && <p className="absolute top-2 left-2 bg-red-100 text-red-500 p-2 rounded">{error}</p>}
-      {directions ? (
-        <iframe
-          title="Map"
-          width="100%"
-          height="100%"
-          src={`https://www.google.com/maps/embed/v1/directions?key=YOUR_GOOGLE_MAPS_KEY&origin=${encodeURIComponent(
-            initialOrigin
-          )}&destination=${encodeURIComponent(initialDestination)}`}
-          allowFullScreen
-        ></iframe>
-      ) : (
-        <p className="absolute inset-0 flex items-center justify-center text-gray-500">
-          Loading map...
-        </p>
-      )}
-    </div>
+    <iframe
+      src={mapUrl}
+      className="w-full h-full rounded-2xl border-none"
+      loading="lazy"
+    />
   );
 };
 
 export default MapView;
+//

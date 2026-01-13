@@ -5,6 +5,7 @@ import { User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ProfileOverview from "@/pages/ProfileOverview";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -45,9 +46,10 @@ const Profile = () => {
   const navItems = [
     { path: "/profile", label: "Overview" },
     { path: "/profile/reservations", label: "Reservations" },
-    { path: "/profile/payments", label: "Payments" },
-    { path: "/profile/return-request", label: "Return Request" },
     { path: "/profile/review", label: "Review" },
+    { path: "/profile/track-shipment", label: "Track Shipment" },
+    
+    
   ];
 
   return (
@@ -110,7 +112,7 @@ const Profile = () => {
                       : "text-foreground hover:bg-secondary"
                   }`}
                 >
-                  Settings
+                  Update Porfile
                 </Link>
                 <Link
                   to="/contact"
@@ -151,7 +153,7 @@ const Profile = () => {
 
           {/* Main Content Area */}
           <main className="lg:col-span-3">
-            <Outlet />
+            <ProfileOverview />
           </main>
         </div>
       </div>
