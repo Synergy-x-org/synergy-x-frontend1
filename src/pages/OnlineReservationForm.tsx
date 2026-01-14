@@ -465,7 +465,7 @@ const OnlineReservationForm: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Runs & Drive">Runs & Drive</SelectItem>
-                      <SelectItem value="Non-Running">Non-Running</SelectItem>
+                      {/* <SelectItem value="Non-Running">Non-Running</SelectItem> */}
                     </SelectContent>
                   </Select>
                 </div>

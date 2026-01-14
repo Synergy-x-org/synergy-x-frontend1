@@ -310,7 +310,7 @@ const QuoteResultStepTwo = () => {
                 onClick={handleGetStarted}
                 className="w-full bg-primary hover:bg-primary/90 text-white text-lg py-6"
               >
-                Get Started
+                Continue
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">
