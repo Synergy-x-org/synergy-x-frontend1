@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,22 +7,41 @@ import { toast } from "@/hooks/use-toast";
 import { authAPI } from "@/services/api";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
+import { getReservationRedirect, clearReservationRedirect } from "@/utils/reservationRedirect";
+
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
+
+  // ✅ Read redirect info (only for this special flow)
+  const flow = (location.state as any)?.flow as string | undefined;
+  const redirectTo = (location.state as any)?.redirectTo as string | undefined;
+
+  const pendingQuote = useMemo(() => {
+    const fromState = (location.state as any)?.quote;
+    if (fromState) return fromState;
+
+    try {
+      const s = sessionStorage.getItem("pendingReservationQuote");
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const res = await authAPI.login(formData);
+      const res: any = await authAPI.login(formData);
 
-      // Your backend shape:
+      // Backend shape you described:
       // res.data.token
       // res.data.email
       // res.data.userDetails.firstName/lastName/phoneNumber
@@ -42,14 +61,49 @@ const Login = () => {
       };
 
       login({ user, token });
+      const redirect = getReservationRedirect();
+
+if (redirect?.flow === "quote_to_reservation" && redirect.redirectTo) {
+  // ✅ Clear so it doesn't keep redirecting forever
+  clearReservationRedirect();
+
+  // ✅ send user to reservation form
+  navigate(redirect.redirectTo, {
+    state: {
+      quote: (() => {
+        try {
+          const s = sessionStorage.getItem("pendingReservationQuote");
+          return s ? JSON.parse(s) : null;
+        } catch {
+          return null;
+        }
+      })(),
+    },
+  });
+  return;
+}
+
+// ✅ normal auth behavior remains unchanged
+navigate("/");
 
       toast({
         title: "Success!",
         description: res?.message || "Login successful",
       });
+      // Login.tsx
 
-      // ✅ IMPORTANT: go home (dropdown shows Profile/Logout)
-      navigate("/");
+
+// inside success area after login({ user, token }) and toast:
+
+
+
+      // ✅ SPECIAL FLOW REDIRECT (ONLY when user came from quote->reservation flow)
+      if (flow === "quote_to_reservation" && redirectTo) {
+        navigate(redirectTo, { state: { quote: pendingQuote } });
+      } else {
+        // ✅ Your existing behavior stays the same
+        navigate("/");
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -123,6 +177,12 @@ const Login = () => {
             Don't have an account?{" "}
             <Link
               to="/signup"
+              // ✅ OPTIONAL: pass flow info to signup too (so signup can also redirect)
+              state={
+                flow === "quote_to_reservation" && redirectTo
+                  ? { flow, redirectTo, quote: pendingQuote }
+                  : undefined
+              }
               className="text-primary hover:underline font-medium"
             >
               Sign up

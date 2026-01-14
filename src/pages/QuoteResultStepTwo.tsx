@@ -1,69 +1,80 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react"; // Removed MapPin as it's now in MapView
+import { X } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingState from "@/components/LoadingState";
 import { QuoteVisitorResponse } from "@/services/api";
 import { toast } from "@/hooks/use-toast";
-import MapView from "@/components/MapView"; // Import MapView
+import MapView from "@/components/MapView";
 
 interface QuoteData extends QuoteVisitorResponse {
-  distance: string; // Keep distance for display in header
-  duration: string; // Keep duration if needed elsewhere, but not directly used by MapView
+  distance: string;
+  duration: string;
 }
 
 const QuoteResultStepTwo = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
   const [isLoading, setIsLoading] = useState(true);
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [mapDistance, setMapDistance] = useState<string | null>(null); // State to hold distance from MapView
+  const [mapDistance, setMapDistance] = useState<string | null>(null);
+
+  // ✅ Normalize quote shape: sometimes your caller passes { data: quote }
+  const quote = useMemo(() => {
+    const raw = (location.state as any)?.quote;
+    return raw?.data ?? raw ?? null;
+  }, [location.state]);
 
   useEffect(() => {
-    // Check if user is logged in
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
 
-    const quoteResponse: QuoteVisitorResponse | undefined = location.state?.quote;
-
-    if (!quoteResponse) {
+    if (!quote) {
       toast({
         title: "Error",
         description: "No quote data found. Please calculate a new quote.",
         variant: "destructive",
       });
-      navigate("/"); // Redirect to home or quote form
+      navigate("/");
       setIsLoading(false);
       return;
     }
 
-    // Initialize quoteData directly from quoteResponse
-   setQuoteData({
-  ...quoteResponse,
-  vehicle: quoteResponse.vehicle ?? {
-    brand: "",
-    model: "",
-    year: 0,
-    id: "",
-  },
-  distance: "N/A",
-  duration: "N/A",
-});
+    setQuoteData({
+      ...quote,
+      vehicle: quote.vehicle ?? { brand: "", model: "", year: 0, id: "" },
+      distance: "N/A",
+      duration: "N/A",
+    });
 
-    setIsLoading(false); // Set loading to false as quote data is available
-
-  }, [location.state, navigate]);
+    setIsLoading(false);
+  }, [quote, navigate]);
 
   const handleGetStarted = () => {
+    if (!quoteData) return;
+
+    // ✅ Persist quote so refresh doesn't lose it
+    sessionStorage.setItem("pendingReservationQuote", JSON.stringify(quoteData));
+
+    // ✅ NEW FLOW:
+    // If not logged in -> go login + tell it to redirect to reservation form after login
     if (!isLoggedIn) {
-      navigate("/login");
-    } else {
-      // TODO: Add logged-in user flow
-      console.log("User is logged in, proceed with booking");
+      navigate("/login", {
+        state: {
+          flow: "quote_to_reservation",
+          redirectTo: "/online-reservation",
+          quote: quoteData,
+        },
+      });
+      return;
     }
+
+    // If already logged in -> go directly
+    navigate("/online-reservation", { state: { quote: quoteData } });
   };
 
   const handleClose = () => {
@@ -81,81 +92,64 @@ const QuoteResultStepTwo = () => {
       </div>
     );
   }
-  const rawQuote = location.state?.quote;
-const quote = rawQuote?.data ?? rawQuote;
-
-if (!quote) {
-  toast({
-    title: "Error",
-    description: "No quote data found.",
-    variant: "destructive",
-  });
-  navigate("/");
-  return;
-}
-
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
+      {/* Stepper Bar */}
       <div className="w-full border-b bg-white">
-  <div className="container mx-auto px-4 py-6 pt-28">
-    <div className="flex items-center justify-between max-w-5xl mx-auto">
-      
-      {/* Step 1 */}
-      <div className="flex flex-col items-center flex-1">
-        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
-          1
+        <div className="container mx-auto px-4 py-6 pt-28">
+          <div className="flex items-center justify-between max-w-5xl mx-auto">
+            {/* Step 1 */}
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+                1
+              </div>
+              <span className="text-sm mt-2 text-primary font-medium">
+                Calculate shipping
+              </span>
+            </div>
+
+            <div className="flex-1 h-px bg-primary mx-2" />
+
+            {/* Step 2 ACTIVE */}
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+                2
+              </div>
+              <span className="text-sm mt-2 text-primary font-medium">
+                Pricing
+              </span>
+            </div>
+
+            <div className="flex-1 h-px bg-muted mx-2" />
+
+            {/* Step 3 */}
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-8 h-8 rounded-full border-2 border-muted text-muted-foreground flex items-center justify-center font-semibold">
+                3
+              </div>
+              <span className="text-sm mt-2 text-muted-foreground">
+                Confirmation
+              </span>
+            </div>
+
+            <div className="flex-1 h-px bg-muted mx-2" />
+
+            {/* Step 4 */}
+            <div className="flex flex-col items-center flex-1">
+              <div className="w-8 h-8 rounded-full border-2 border-muted text-muted-foreground flex items-center justify-center font-semibold">
+                4
+              </div>
+              <span className="text-sm mt-2 text-muted-foreground">Finish</span>
+            </div>
+          </div>
         </div>
-        <span className="text-sm mt-2 text-primary font-medium">
-          Calculate shipping
-        </span>
       </div>
 
-      <div className="flex-1 h-px bg-primary mx-2" />
-
-      {/* Step 2 – ACTIVE */}
-      <div className="flex flex-col items-center flex-1">
-        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
-          2
-        </div>
-        <span className="text-sm mt-2 text-primary font-medium">
-          Pricing
-        </span>
-      </div>
-
-      <div className="flex-1 h-px bg-muted mx-2" />
-
-      {/* Step 3 */}
-      <div className="flex flex-col items-center flex-1">
-        <div className="w-8 h-8 rounded-full border-2 border-muted text-muted-foreground flex items-center justify-center font-semibold">
-          3
-        </div>
-        <span className="text-sm mt-2 text-muted-foreground">
-          Confirmation
-        </span>
-      </div>
-
-      <div className="flex-1 h-px bg-muted mx-2" />
-
-      {/* Step 4 */}
-      <div className="flex flex-col items-center flex-1">
-        <div className="w-8 h-8 rounded-full border-2 border-muted text-muted-foreground flex items-center justify-center font-semibold">
-          4
-        </div>
-        <span className="text-sm mt-2 text-muted-foreground">
-          Finish
-        </span>
-      </div>
-
-    </div>
-  </div>
-</div>
-      
       <main className="container mx-auto px-4 py-8 pt-32">
         <div className="max-w-7xl mx-auto">
-          {/* Close button */}
           <button
             onClick={handleClose}
             className="absolute top-32 right-8 p-2 hover:bg-secondary rounded-full transition-colors"
@@ -165,29 +159,46 @@ if (!quote) {
           </button>
 
           <div className="grid lg:grid-cols-2 gap-8">
-            {/* Left Column - Quote Details */}
+            {/* Left Column */}
             <div className="space-y-6">
-              {/* Quote Header */}
               <div className="bg-primary text-white p-6 rounded-lg shadow-lg">
-                <h1 className="text-2xl font-bold">Quote {quoteData.quoteReference}</h1>
+                <h1 className="text-2xl font-bold">
+                  Quote {quoteData.quoteReference}
+                </h1>
               </div>
 
-              {/* Pickup and Delivery Info */}
               <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground font-medium">Pickup from</span>
-                  <span className="font-semibold">{quoteData.pickupLocation}</span>
+                  <span className="text-muted-foreground font-medium">
+                    Pickup from
+                  </span>
+                  <span className="font-semibold">
+                    {quoteData.pickupLocation}
+                  </span>
                 </div>
+
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground font-medium">Delivered to</span>
-                  <span className="font-semibold">{quoteData.deliveryLocation}</span>
+                  <span className="text-muted-foreground font-medium">
+                    Delivered to
+                  </span>
+                  <span className="font-semibold">
+                    {quoteData.deliveryLocation}
+                  </span>
                 </div>
+
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground font-medium">Car Model</span>
-                  <span className="font-semibold">{`${quoteData.vehicle.brand} ${quoteData.vehicle.model} ${quoteData.vehicle.year}`}</span>
+                  <span className="text-muted-foreground font-medium">
+                    Car Model
+                  </span>
+                  <span className="font-semibold">
+                    {`${quoteData.vehicle.brand} ${quoteData.vehicle.model} ${quoteData.vehicle.year}`}
+                  </span>
                 </div>
+
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground font-medium">Delivery Date</span>
+                  <span className="text-muted-foreground font-medium">
+                    Delivery Date
+                  </span>
                   <span className="font-semibold">{quoteData.deliveryDate}</span>
                 </div>
               </div>
@@ -197,49 +208,93 @@ if (!quote) {
                 <div className="bg-primary text-white p-4">
                   <h2 className="text-xl font-bold">Total Shipping Cost</h2>
                 </div>
-                
+
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Final price</p>
-                      <p className="text-4xl font-bold text-primary">${quoteData.price}</p>
-                      
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Final price
+                      </p>
+                      <p className="text-4xl font-bold text-primary">
+                        ${quoteData.price}
+                      </p>
+
                       <div className="mt-4 space-y-2">
                         <div>
-                          <p className="text-sm text-muted-foreground">Down Payment</p>
-                          <p className="text-2xl font-bold text-primary">${quoteData.downPayment}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Down Payment
+                          </p>
+                          <p className="text-2xl font-bold text-primary">
+                            ${quoteData.downPayment}
+                          </p>
                         </div>
-                        
+
                         <div>
-                          <p className="text-sm text-muted-foreground">Balance on Delivery</p>
-                          <p className="text-2xl font-bold text-primary">${quoteData.balanceOnDelivery}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Balance on Delivery
+                          </p>
+                          <p className="text-2xl font-bold text-primary">
+                            ${quoteData.balanceOnDelivery}
+                          </p>
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="text-right">
                       <h3 className="text-xl font-bold mb-3">Open Carrier</h3>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-start gap-2">
                           <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M5 13l4 4L19 7"
+                              />
                             </svg>
                           </div>
                           <span>Best price availability</span>
                         </div>
+
                         <div className="flex items-start gap-2">
                           <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M5 13l4 4L19 7"
+                              />
                             </svg>
                           </div>
                           <span>Door-to-Door Service</span>
                         </div>
+
                         <div className="flex items-start gap-2">
                           <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M5 13l4 4L19 7"
+                              />
                             </svg>
                           </div>
                           <span>Insurance included</span>
@@ -250,55 +305,52 @@ if (!quote) {
                 </div>
               </div>
 
-              {/* Get Started Button */}
-              <Button 
+              {/* ✅ NEW FLOW BUTTON */}
+              <Button
                 onClick={handleGetStarted}
                 className="w-full bg-primary hover:bg-primary/90 text-white text-lg py-6"
               >
                 Get Started
               </Button>
 
-              {/* Privacy Text */}
               <p className="text-center text-sm text-muted-foreground">
                 We respect your privacy and do not distribute your data.
               </p>
             </div>
 
-            {/* Right Column - Map and Contact */}
+            {/* Right Column */}
             <div className="space-y-6">
-            <div className="flex items-center justify-center gap-4">
-              <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
-                {quoteData.pickupLocation}
-              </span>
-
-              <div className="flex items-center gap-3 flex-1 max-w-[260px]">
-                <div className="flex-1 border-t-2 border-dashed" />
-                <span className="text-sm font-semibold text-muted-foreground">
-                  {mapDistance}
+              <div className="flex items-center justify-center gap-4">
+                <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
+                  {quoteData.pickupLocation}
                 </span>
-                <div className="flex-1 border-t-2 border-dashed" />
+
+                <div className="flex items-center gap-3 flex-1 max-w-[260px]">
+                  <div className="flex-1 border-t-2 border-dashed" />
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {mapDistance}
+                  </span>
+                  <div className="flex-1 border-t-2 border-dashed" />
+                </div>
+
+                <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
+                  {quoteData.deliveryLocation}
+                </span>
               </div>
 
-              <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
-                {quoteData.deliveryLocation}
-              </span>
-            </div>
+              <div className="bg-white rounded-2xl shadow overflow-hidden h-[420px]">
+                <MapView
+                  initialOrigin={quoteData.pickupLocation}
+                  initialDestination={quoteData.deliveryLocation}
+                  onDistanceChange={setMapDistance}
+                />
+              </div>
 
-            <div className="bg-white rounded-2xl shadow overflow-hidden h-[420px]">
-              <MapView
-                initialOrigin={quoteData.pickupLocation}
-                initialDestination={quoteData.deliveryLocation}
-                onDistanceChange={setMapDistance}
-              />
-            </div>
-
-              {/* Contact Box */}
               <div className="bg-primary text-white p-6 rounded-lg shadow-lg flex items-center gap-4">
                 <div className="flex-shrink-0">
-                  {/* Replace this profile image if needed */}
                   <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center overflow-hidden">
-                    <img 
-                      src="https://api.dicebear.com/7.x/avataaars/svg?seed=expert" 
+                    <img
+                      src="https://api.dicebear.com/7.x/avataaars/svg?seed=expert"
                       alt="Synergy X Expert"
                       className="w-full h-full object-cover"
                     />
@@ -306,9 +358,10 @@ if (!quote) {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm mb-2">
-                    Speak to Synergy X experts to discuss your vehicle shipping and let us answer any questions you may have.
+                    Speak to Synergy X experts to discuss your vehicle shipping
+                    and let us answer any questions you may have.
                   </p>
-                  <a 
+                  <a
                     href="mailto:admin@synergyxtransportation.com"
                     className="font-semibold hover:underline"
                   >
@@ -327,163 +380,3 @@ if (!quote) {
 };
 
 export default QuoteResultStepTwo;
-
-
-
-// import { useEffect, useState } from "react";
-// import { useNavigate, useLocation } from "react-router-dom";
-// import { Button } from "@/components/ui/button";
-// import { X } from "lucide-react";
-// import Header from "@/components/Header";
-// import Footer from "@/components/Footer";
-// import LoadingState from "@/components/LoadingState";
-// import { QuoteVisitorResponse } from "@/services/api";
-// import { toast } from "@/hooks/use-toast";
-// import MapView from "@/components/MapView";
-
-// interface QuoteData extends QuoteVisitorResponse {
-//   distance: string;
-//   duration: string;
-// }
-
-// const QuoteResultStepTwo = () => {
-//   const navigate = useNavigate();
-//   const location = useLocation();
-
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
-//   const [mapDistance, setMapDistance] = useState<string>("—");
-
-//   useEffect(() => {
-//     const quoteResponse: QuoteVisitorResponse | undefined =
-//       location.state?.quote?.data ?? location.state?.quote;
-
-//     if (!quoteResponse) {
-//       toast({
-//         title: "Error",
-//         description: "No quote data found. Please calculate a new quote.",
-//         variant: "destructive",
-//       });
-//       navigate("/");
-//       return;
-//     }
-
-//     setQuoteData({
-//       ...quoteResponse,
-//       vehicle: quoteResponse.vehicle ?? {
-//         brand: "",
-//         model: "",
-//         year: 0,
-//         id: "",
-//       },
-//       distance: "N/A",
-//       duration: "N/A",
-//     });
-
-//     setIsLoading(false);
-//   }, [location.state, navigate]);
-
-//   if (isLoading) {
-//     return <LoadingState message="Calculating your quote, please wait..." />;
-//   }
-
-//   if (!quoteData) {
-//     return null;
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-background">
-//       <Header />
-
-//       <main className="container mx-auto px-4 py-32">
-//         <button
-//           onClick={() => navigate("/")}
-//           className="absolute top-32 right-8 p-2 hover:bg-secondary rounded-full"
-//         >
-//           <X className="h-6 w-6" />
-//         </button>
-
-//         <div className="grid lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
-
-//           {/* LEFT COLUMN */}
-//           <div className="space-y-6">
-//             <div className="bg-primary text-white p-6 rounded-lg">
-//               <h1 className="text-2xl font-bold">
-//                 Quote {quoteData.quoteReference}
-//               </h1>
-//             </div>
-
-//             <div className="bg-white p-6 rounded-lg shadow space-y-3">
-//               <div className="flex justify-between">
-//                 <span className="text-muted-foreground">Pickup</span>
-//                 <span className="font-semibold">
-//                   {quoteData.pickupLocation}
-//                 </span>
-//               </div>
-//               <div className="flex justify-between">
-//                 <span className="text-muted-foreground">Delivery</span>
-//                 <span className="font-semibold">
-//                   {quoteData.deliveryLocation}
-//                 </span>
-//               </div>
-//               <div className="flex justify-between">
-//                 <span className="text-muted-foreground">Vehicle</span>
-//                 <span className="font-semibold">
-//                   {quoteData.vehicle.brand} {quoteData.vehicle.model}{" "}
-//                   {quoteData.vehicle.year}
-//                 </span>
-//               </div>
-//             </div>
-
-//             <Button className="w-full py-6 text-lg">Get Started</Button>
-//           </div>
-
-//           {/* RIGHT COLUMN */}
-//           <div className="space-y-6">
-//             <div className="flex items-center justify-center gap-4">
-//               <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
-//                 {quoteData.pickupLocation}
-//               </span>
-
-//               <div className="flex items-center gap-3 flex-1 max-w-[260px]">
-//                 <div className="flex-1 border-t-2 border-dashed" />
-//                 <span className="text-sm font-semibold text-muted-foreground">
-//                   {mapDistance}
-//                 </span>
-//                 <div className="flex-1 border-t-2 border-dashed" />
-//               </div>
-
-//               <span className="px-5 py-2 rounded-full bg-primary text-white font-semibold">
-//                 {quoteData.deliveryLocation}
-//               </span>
-//             </div>
-
-//             <div className="bg-white rounded-2xl shadow overflow-hidden h-[420px]">
-//               <MapView
-//                 initialOrigin={quoteData.pickupLocation}
-//                 initialDestination={quoteData.deliveryLocation}
-//                 onDistanceChange={setMapDistance}
-//               />
-//             </div>
-
-//             <div className="bg-primary text-white p-6 rounded-lg">
-//               <p className="text-sm mb-2">
-//                 Speak to Synergy X experts about your shipment.
-//               </p>
-//               <a
-//                 href="mailto:admin@synergyxtransportation.com"
-//                 className="font-semibold underline"
-//               >
-//                 admin@synergyxtransportation.com
-//               </a>
-//             </div>
-//           </div>
-//         </div>
-//       </main>
-
-//       <Footer />
-//     </div>
-//   );
-// };
-
-// export default QuoteResultStepTwo;

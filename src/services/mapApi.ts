@@ -8,7 +8,7 @@ export interface MapData {
 export interface MapResponse {
   distance: string;
   duration: string;
-  mapImageUrl: string;
+  mapUrl: string;
 }
 
 export const mapAPI = {

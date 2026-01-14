@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-const ProfilePayments = () => {
+const ReservationPayment = () => {
   const { user } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState("visa");
   const [cardData, setCardData] = useState({
@@ -181,4 +181,4 @@ const ProfilePayments = () => {
   );
 };
 
-export default ProfilePayments;
+export default ReservationPayment;

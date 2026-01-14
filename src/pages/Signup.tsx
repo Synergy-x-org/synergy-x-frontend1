@@ -3,14 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
 import { toast } from "@/hooks/use-toast";
-import { authAPI, SignupData } from "@/services/api"; // Import SignupData
+import { authAPI, SignupData } from "@/services/api";
 import logo from "@/assets/logo.png";
+import { getReservationRedirect } from "@/utils/reservationRedirect";
 
 const Signup = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState<SignupData>({
     firstName: "",
     lastName: "",
@@ -26,27 +27,39 @@ const Signup = () => {
 
     try {
       const response = await authAPI.register(formData);
-      console.log("API Response:", response);
 
-      // Match backend success message (case-insensitive for flexibility)
-      if (
-        response.message &&
-        response.message.toLowerCase().includes("registration successful")
-      ) {
-        navigate("/signup-success", { state: { email: formData.email } });
-      } else {
-        // Handle unexpected but valid success
+      const message = (response?.message || "").toLowerCase();
+
+      // ✅ If user came from quote -> reservation flow,
+      // after signup send them to login (login will redirect to /online-reservation)
+      const redirect = getReservationRedirect();
+      if (redirect?.flow === "quote_to_reservation") {
         toast({
-          title: "Success",
-          description: response.message || "Registration successful.",
-          variant: "default",
+          title: "Account created",
+          description: "Please sign in to continue your reservation.",
         });
+
+        navigate("/login");
+        return;
       }
+
+      // ✅ Normal signup flow remains unchanged
+      if (message.includes("registration successful")) {
+        navigate("/signup-success", { state: { email: formData.email } });
+        return;
+      }
+
+      // If backend returns some other success message
+      toast({
+        title: "Success",
+        description: response?.message || "Registration successful.",
+      });
+
+      navigate("/signup-success", { state: { email: formData.email } });
     } catch (error: any) {
-      console.error("Registration Error:", error);
       toast({
         title: "Error",
-        description: error.message || "Registration failed",
+        description: error?.message || "Registration failed",
         variant: "destructive",
       });
     } finally {
@@ -58,7 +71,6 @@ const Signup = () => {
     <div className="min-h-screen bg-secondary/30 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          {/* Replace logo image here: /src/assets/logo.png */}
           <div className="flex justify-center mb-8">
             <img src={logo} alt="Synergy-X Logo" className="h-12" />
           </div>
@@ -144,12 +156,7 @@ const Signup = () => {
               />
             </div>
 
-
-            <Button
-              type="submit"
-              className="w-full mt-6"
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full mt-6" disabled={loading}>
               {loading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
@@ -163,7 +170,10 @@ const Signup = () => {
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             Already have an account?{" "}
-            <Link to="/login" className="text-primary hover:underline font-medium">
+            <Link
+              to="/login"
+              className="text-primary hover:underline font-medium"
+            >
               Sign In
             </Link>
           </p>
