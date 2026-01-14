@@ -39,28 +39,22 @@ export const getAutocomplete = async (input: string) => {
 /* ----------------------------------
    DIRECTIONS
 ----------------------------------- */
-export interface DirectionsResponse {
-  distance: string;
-  duration: string;
-  mapUrl: string;
-}
+export const getDirections = async (origin: string, destination: string) => {
+  const response = await axios.get(`${BASE_URL}/maps/directions`, {
+    params: { origin, destination },
+  });
 
-export const getDirections = async (
-  origin: string,
-  destination: string
-): Promise<DirectionsResponse> => {
-  const response = await axios.get<DirectionsResponse>(
-    `${BASE_URL}/maps/directions`,
-    {
-      params: {
-        origin,
-        destination,
-      },
-    }
-  );
+  const leg = response.data.routes?.[0]?.legs?.[0];
 
-  // response.data is NOW properly typed ✅
-  return response.data;
+  if (!leg) throw new Error("No route found");
+
+  return {
+    distance: leg.distance.text,
+    duration: leg.duration.text,
+    mapUrl: response.data.routes?.[0]?.overview_polyline
+      ? "" // (depends how you want mapUrl)
+      : "",
+  };
 };
 
 

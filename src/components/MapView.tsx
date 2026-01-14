@@ -66,26 +66,76 @@
 // export default MapView;
 
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getDirections } from "@/services/mapService";
+
 
 interface Props {
   initialOrigin: string;
   initialDestination: string;
+  onDistanceChange?: (distance: string) => void;
 }
 
-const MapView = ({ initialOrigin, initialDestination }: Props) => {
-  const mapUrl = `https://synergy-x-transportation-backend.onrender.com/api/v1/maps/directions?origin=${encodeURIComponent(
-    initialOrigin
-  )}&destination=${encodeURIComponent(initialDestination)}`;
+const MapView = ({ initialOrigin, initialDestination, onDistanceChange }: Props) => {
+  const [mapSrc, setMapSrc] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setError(null);
+        setMapSrc("");
+
+        if (!initialOrigin || !initialDestination) return;
+
+        const data = await getDirections(initialOrigin, initialDestination);
+        // data = { distance, duration, mapUrl }
+
+        if (cancelled) return;
+
+        setMapSrc(data.mapUrl);
+        onDistanceChange?.(data.distance);
+      } catch (e: any) {
+        if (cancelled) return;
+        setError(e?.message ?? "Failed to load map");
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialOrigin, initialDestination, onDistanceChange]);
+
+  if (error) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-sm text-red-600 p-4">
+        {error}
+      </div>
+    );
+  }
+
+  if (!mapSrc) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
+        Loading map...
+      </div>
+    );
+  }
 
   return (
     <iframe
-      src={mapUrl}
+      title="Route map"
+      src={mapSrc}
       className="w-full h-full rounded-2xl border-none"
       loading="lazy"
+      allowFullScreen
+      referrerPolicy="no-referrer-when-downgrade"
     />
   );
 };
 
 export default MapView;
-//
