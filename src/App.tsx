@@ -1,9 +1,9 @@
-// Add the QuoteStep1 route to your router. I kept the rest unchanged; only the new route is added.
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -24,6 +24,7 @@ import MovingCostCalculator from "./pages/MovingCostCalculator";
 import QuoteStep1 from "./pages/QuoteStep1";
 import NotFound from "./pages/NotFound";
 import QuoteResultStepTwo from "./pages/QuoteResultStepTwo";
+
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
@@ -31,37 +32,39 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/confirm-email" element={<ConfirmEmail />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/signup-success" element={<SignupSuccess />} />
-          <Route path="/password-changed" element={<PasswordChanged />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/shipping-quote" element={<ShippingQuote />} />
-          <Route path="/door-to-door" element={<DoorToDoorShipping />} />
-          <Route path="/motorcycle-shipping" element={<MotorcycleShipping />} />
-          <Route path="/car-to-another-state" element={<CarToAnotherState />} />
-          <Route path="/cross-country-car-shipping" element={<CrossCountryCarShipping />} />
-          <Route path="/quote-result" element={<QuoteResult />} />
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/confirm-email" element={<ConfirmEmail />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/signup-success" element={<SignupSuccess />} />
+            <Route path="/password-changed" element={<PasswordChanged />} />
+            <Route path="/profile" element={<Profile />} />
 
-          {/* NEW: Quote Step 1 (review + submit) */}
-          <Route path="/quote-step-1" element={<QuoteStep1 />} />
-          <Route path="/quote-result-step-two" element={<QuoteResultStepTwo />} />
+            <Route path="/shipping-quote" element={<ShippingQuote />} />
+            <Route path="/door-to-door" element={<DoorToDoorShipping />} />
+            <Route path="/motorcycle-shipping" element={<MotorcycleShipping />} />
+            <Route path="/car-to-another-state" element={<CarToAnotherState />} />
+            <Route
+              path="/cross-country-car-shipping"
+              element={<CrossCountryCarShipping />}
+            />
+            <Route path="/quote-result" element={<QuoteResult />} />
+            <Route path="/quote-step-1" element={<QuoteStep1 />} />
+            <Route path="/quote-result-step-two" element={<QuoteResultStepTwo />} />
 
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/moving-cost-calculator" element={<MovingCostCalculator />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/moving-cost-calculator" element={<MovingCostCalculator />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

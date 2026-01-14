@@ -1,87 +1,104 @@
-// ✅ New File: src/contexts/AuthContext.tsx - Authentication context provider
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-interface User {
-  id: string;
+type User = {
+  id?: string;
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-}
+  phoneNumber?: string;
+};
 
-interface AuthContextType {
+type AuthContextType = {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (userData: User, token: string) => void;
+  login: (payload: { user: User; token: string }) => void;
   logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
-}
+  updateUser: (patch: Partial<User>) => void;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+const LS_USER = "synergyx_user";
+const LS_TOKEN = "synergyx_token";
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user data on mount
-    const storedUser = localStorage.getItem("synergyx_user");
-    const storedToken = localStorage.getItem("synergyx_token");
-    
+    const storedUser = localStorage.getItem(LS_USER);
+    const storedToken = localStorage.getItem(LS_TOKEN);
+
     if (storedUser && storedToken) {
       try {
         setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Failed to parse stored user data:", error);
-        localStorage.removeItem("synergyx_user");
-        localStorage.removeItem("synergyx_token");
+        setToken(storedToken);
+      } catch {
+        localStorage.removeItem(LS_USER);
+        localStorage.removeItem(LS_TOKEN);
+        setUser(null);
+        setToken(null);
       }
     }
     setIsLoading(false);
   }, []);
 
-  const login = (userData: User, token: string) => {
-    setUser(userData);
-    localStorage.setItem("synergyx_user", JSON.stringify(userData));
-    localStorage.setItem("synergyx_token", token);
+  const login: AuthContextType["login"] = ({ user, token }) => {
+    setUser(user);
+    setToken(token);
+    localStorage.setItem(LS_USER, JSON.stringify(user));
+    localStorage.setItem(LS_TOKEN, token);
+
+    // optional legacy keys cleanup (avoid mismatch bugs)
+    localStorage.removeItem("userEmail");
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("synergyx_user");
-    localStorage.removeItem("synergyx_token");
+    setToken(null);
+
+    // ✅ our current keys
+    localStorage.removeItem(LS_USER);
+    localStorage.removeItem(LS_TOKEN);
+
+    // ✅ legacy keys you had before (prevents UI mismatch)
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("tokenExpiration");
   };
 
-  const updateUser = (userData: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      localStorage.setItem("synergyx_user", JSON.stringify(updatedUser));
-    }
+  const updateUser = (patch: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem(LS_USER, JSON.stringify(next));
+      return next;
+    });
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        logout,
-        updateUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      token,
+      isAuthenticated: !!user && !!token,
+      isLoading,
+      login,
+      logout,
+      updateUser,
+    }),
+    [user, token, isLoading]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
 };

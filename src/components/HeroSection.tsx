@@ -5,31 +5,23 @@ import QuoteForm from "./QuoteForm";
 import hero1 from "../assets/hero1.jpg";
 import hero2 from "../assets/hero2.jpg";
 import hero3 from "../assets/hero3.jpg";
+import { useAuth } from "@/contexts/AuthContext";
 
 const heroImages = [hero1, hero2, hero3];
 
 const HeroSection = () => {
   const [currentImage, setCurrentImage] = useState(0);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // ✅ Use AuthContext (so UI stays consistent everywhere)
+  const { isAuthenticated, isLoading } = useAuth();
+  const isLoggedIn = !isLoading && isAuthenticated;
 
   useEffect(() => {
-    const checkLoginStatus = () => {
-      const token = localStorage.getItem("token");
-      setIsLoggedIn(!!token);
-    };
-
-    checkLoginStatus(); // Check status on mount
-
-    window.addEventListener("storage", checkLoginStatus); // Listen for storage changes
-
     const timer = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % heroImages.length);
     }, 4000);
 
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener("storage", checkLoginStatus); // Clean up event listener
-    };
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -63,16 +55,25 @@ const HeroSection = () => {
               Get your car delivered safely, anywhere, anytime. Fast, secure, and affordable auto
               transport for individuals and businesses.
             </p>
+
+            {/* ✅ Buttons side-by-side (same box) */}
             <div className="flex flex-wrap gap-4">
               <Link to="/shipping-quote">
                 <Button size="lg" className="bg-primary hover:bg-primary/90">
                   Get a Free Quote
                 </Button>
               </Link>
+
               {isLoggedIn && (
-                <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white hover:text-foreground">
-                  Track My Shipment
-                </Button>
+                <Link to="/profile/track-shipment">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="bg-white/10 backdrop-blur-sm border-white text-white hover:bg-white hover:text-foreground"
+                  >
+                    Track My Shipment
+                  </Button>
+                </Link>
               )}
             </div>
           </div>

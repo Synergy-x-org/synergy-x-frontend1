@@ -1,7 +1,7 @@
-// ✅ Updated File: src/pages/Profile.tsx - Main profile layout using real auth data
+// ✅ Updated File: src/pages/Profile.tsx
 import { useEffect } from "react";
-import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
-import { User, LogOut } from "lucide-react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -12,7 +12,6 @@ const Profile = () => {
   const location = useLocation();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
 
-  // Check if user is authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate("/login");
@@ -24,22 +23,18 @@ const Profile = () => {
     navigate("/login");
   };
 
-  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen bg-secondary/20 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Don't render if not authenticated
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   const isActivePath = (path: string) => location.pathname === path;
 
@@ -48,31 +43,43 @@ const Profile = () => {
     { path: "/profile/reservations", label: "Reservations" },
     { path: "/profile/review", label: "Review" },
     { path: "/profile/track-shipment", label: "Track Shipment" },
-    
-    
   ];
 
   return (
     <div className="min-h-screen bg-secondary/20">
       <Header />
-      
+
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-[#4a1f1f] to-[#6b2e2e] pt-28 pb-16">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">My Account</h1>
-          <nav className="flex items-center gap-2 text-sm text-white/80">
-            <Link to="/" className="hover:text-white transition-colors">Home</Link>
-            <span>›</span>
-            <span className="text-white">Account Dashboard</span>
-            {location.pathname !== "/profile" && (
-              <>
-                <span>›</span>
-                <span className="text-white">
-                  {navItems.find(item => item.path === location.pathname)?.label}
-                </span>
-              </>
-            )}
-          </nav>
+        <div className="container mx-auto px-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              My Account
+            </h1>
+            <nav className="flex items-center gap-2 text-sm text-white/80">
+              <Link to="/" className="hover:text-white transition-colors">
+                Home
+              </Link>
+              <span>›</span>
+              <span className="text-white">Account Dashboard</span>
+              {location.pathname !== "/profile" && (
+                <>
+                  <span>›</span>
+                  <span className="text-white">
+                    {navItems.find((item) => item.path === location.pathname)?.label}
+                  </span>
+                </>
+              )}
+            </nav>
+          </div>
+
+          {/* ✅ Back to Home button */}
+          <Link
+            to="/"
+            className="bg-white/10 border border-white/30 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-white hover:text-foreground transition-colors"
+          >
+            Back to Home
+          </Link>
         </div>
       </div>
 
@@ -99,7 +106,6 @@ const Profile = () => {
                 ))}
               </nav>
 
-              {/* Divider */}
               <div className="border-t border-border my-4" />
 
               {/* Settings Links */}
@@ -112,7 +118,7 @@ const Profile = () => {
                       : "text-foreground hover:bg-secondary"
                   }`}
                 >
-                  Update Porfile
+                  Update Profile
                 </Link>
                 <Link
                   to="/contact"
@@ -122,7 +128,6 @@ const Profile = () => {
                 </Link>
               </div>
 
-              {/* Divider */}
               <div className="border-t border-border my-4" />
 
               {/* User Info */}
@@ -130,15 +135,20 @@ const Profile = () => {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                     <span className="text-white text-sm font-medium">
-                      {user.firstName[0]}{user.lastName[0]}
+                      {(user.firstName?.[0] || "U").toUpperCase()}
+                      {(user.lastName?.[0] || "").toUpperCase()}
                     </span>
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">
                       {user.firstName} {user.lastName}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {user.email}
+                    </p>
                   </div>
+
                   <button
                     onClick={handleLogout}
                     className="p-2 hover:bg-secondary rounded-md transition-colors"
