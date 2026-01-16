@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfileOverview from "@/pages/ProfileOverview";
+import ProfileReservations from "@/pages/ProfileReservations"; // ✅ add
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -163,7 +164,11 @@ const Profile = () => {
 
           {/* Main Content Area */}
           <main className="lg:col-span-3">
-            <ProfileOverview />
+            {location.pathname === "/profile/reservations" ? (
+              <ProfileReservations />
+            ) : (
+              <ProfileOverview />
+            )}
           </main>
         </div>
       </div>

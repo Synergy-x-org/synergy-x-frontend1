@@ -25,6 +25,9 @@ import QuoteStep1 from "./pages/QuoteStep1";
 import NotFound from "./pages/NotFound";
 import QuoteResultStepTwo from "./pages/QuoteResultStepTwo";
 import OnlineReservationForm from "./pages/OnlineReservationForm";
+import PaymentProtection from "./pages/PaymentProtection";
+import ProfileReservation from "./pages/ProfileReservations";
+
 
 import { AuthProvider } from "@/contexts/AuthContext";
 
@@ -60,6 +63,9 @@ const App = () => (
             <Route path="/quote-step-1" element={<QuoteStep1 />} />
             <Route path="/quote-result-step-two" element={<QuoteResultStepTwo />} />
             <Route path="/online-reservation" element={<OnlineReservationForm />} />
+            <Route path="/payment-protection" element={<PaymentProtection />} />
+            <Route path="/profile/reservations" element={<ProfileReservation />} />
+
 
 
             <Route path="/contact" element={<Contact />} />
