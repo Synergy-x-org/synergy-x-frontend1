@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 type DashboardData = {
   totalReservations?: number;
@@ -175,7 +176,10 @@ const ProfileOverview = () => {
           <h3 className="font-semibold text-foreground">
             Reservation Details
           </h3>
-          <span className="text-sm text-primary cursor-pointer">See All</span>
+        <Link to="/profile/reservations" className="text-sm text-primary cursor-pointer">
+          See All
+        </Link>
+
         </div>
 
         {/* Table Header */}

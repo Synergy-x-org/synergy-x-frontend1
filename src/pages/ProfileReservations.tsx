@@ -1,13 +1,25 @@
-// ✅ Updated File: src/pages/ProfileReservations.tsx
+// src/pages/ProfileReservations.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Search, Filter, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { reservationsAPI, type MyReservation } from "@/services/reservationsAPI"; // ✅ adjust path if yours differs
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  reservationsAPI,
+  type UserProfileReservation,
+  type ReservationDetails,
+} from "@/services/reservationsAPI";
 
-type UiReservationStatus = "Active" | "Pending" | "Cancelled";
+type UiStatus = "Active" | "Pending" | "Canceled";
 
 type UiReservation = {
   id: string;
@@ -16,152 +28,382 @@ type UiReservation = {
   destination: string;
   date: string;
   amount: string;
-  status: UiReservationStatus;
+  status: UiStatus;
 };
 
-const mapStatus = (status?: string): UiReservationStatus => {
-  const s = (status || "").toUpperCase();
-  if (s === "ACTIVE") return "Active";
+type FilterBy = "NONE" | "DATE" | "LOCATION";
+
+const mapStatus = (raw?: string): UiStatus => {
+  const s = (raw || "").toUpperCase();
   if (s === "PENDING") return "Pending";
-  if (s === "CANCELLED" || s === "CANCELED") return "Cancelled";
-  // fallback (don’t break UI)
+  if (s === "ACTIVE" || s === "SUCCESSFUL" || s === "SHIPPED" || s === "DELIVERED")
+    return "Active";
+  if (s === "CANCELLED" || s === "CANCELED" || s === "FAILED") return "Canceled";
   return "Pending";
+};
+
+const statusBadgeClass = (s: UiStatus) => {
+  if (s === "Active") return "bg-green-500 hover:bg-green-600 text-white border-0";
+  if (s === "Pending") return "bg-yellow-500 hover:bg-yellow-600 text-white border-0";
+  return "bg-red-500 hover:bg-red-600 text-white border-0";
 };
 
 const formatMoney = (value?: number) => {
   if (typeof value !== "number" || Number.isNaN(value)) return "—";
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-  }).format(value);
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(
+    value
+  );
 };
 
-const pickDate = (r: MyReservation) =>
+// user-profile list mapping (limited fields)
+const toUiFromUserProfile = (r: UserProfileReservation): UiReservation => ({
+  id: r.reservationId,
+  vehicleModel: r.quoteReference ? `Quote ${r.quoteReference}` : "—",
+  location: "—",
+  destination: "—",
+  date: r.createdAt || "—",
+  amount: formatMoney(r.amount),
+  status: mapStatus(r.status),
+});
+
+// date-range mapping (full fields)
+const pickDate = (r: ReservationDetails) =>
   r.reservationDate || r.pickupDate || r.deliveryDate || "—";
 
+const toUiFromDateRange = (r: ReservationDetails): UiReservation => ({
+  id: r.reservationId,
+  vehicleModel: r.vehicle || "—",
+  location: r.pickupAddress || "—",
+  destination: r.deliveryAddress || "—",
+  date: pickDate(r),
+  amount: formatMoney(r.price),
+  status: mapStatus(r.status),
+});
+
 const ProfileReservations = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const { token } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reservations, setReservations] = useState<UiReservation[]>([]);
 
-  useEffect(() => {
-    let mounted = true;
+  const [allReservations, setAllReservations] = useState<UiReservation[]>([]);
 
-    const run = async () => {
+  // search box (reservationId or quote reference fallback)
+  const [search, setSearch] = useState("");
+
+  // filterBy dropdown
+  const [filterBy, setFilterBy] = useState<FilterBy>("NONE");
+
+  // date-range inputs (endpoint requires start+end)
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  // location suggestions endpoint
+  const [locationKeyword, setLocationKeyword] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+
+  // status dropdown - show placeholder "Status" but still keep ALL internally
+  const [statusFilter, setStatusFilter] = useState<UiStatus | "ALL">("ALL");
+
+  // Dormant logic
+  const activeLock = useMemo(() => {
+    if (filterBy === "DATE" && (startDate || endDate)) return "DATE";
+    if (filterBy === "LOCATION" && locationKeyword.trim()) return "LOCATION";
+    if (statusFilter !== "ALL") return "STATUS";
+    if (search.trim()) return "SEARCH";
+    return null;
+  }, [filterBy, startDate, endDate, locationKeyword, statusFilter, search]);
+
+  const loadDefault = async () => {
+    if (!token) {
+      setLoading(false);
+      setError("You must be logged in.");
+      return;
+    }
+
+    try {
       setLoading(true);
       setError(null);
+      const data = await reservationsAPI.getUserProfileReservations(token);
+      setAllReservations(data.map(toUiFromUserProfile));
+    } catch (e: any) {
+      setAllReservations([]);
+      setError(e?.message || "Failed to load reservations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDefault();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  const resetAll = () => {
+    setSearch("");
+    setFilterBy("NONE");
+    setStartDate("");
+    setEndDate("");
+    setLocationKeyword("");
+    setLocationSuggestions([]);
+    setStatusFilter("ALL");
+    setError(null);
+    loadDefault();
+  };
+
+  // DATE RANGE: call endpoint when both dates are present
+  useEffect(() => {
+    const run = async () => {
+      if (filterBy !== "DATE") return;
+      if (!startDate || !endDate) return;
+      if (!token) return;
 
       try {
-        const data = await reservationsAPI.getMyReservations();
-
-        const mapped: UiReservation[] = data.map((r) => ({
-          id: r.reservationId,
-          vehicleModel: r.vehicle || "—",
-          location: r.pickupAddress || "—",
-          destination: r.deliveryAddress || "—",
-          date: pickDate(r),
-          amount: formatMoney(r.price),
-          status: mapStatus(r.status),
-        }));
-
-        if (mounted) setReservations(mapped);
+        setLoading(true);
+        setError(null);
+        const data = await reservationsAPI.getByDateRange(startDate, endDate, token);
+        setAllReservations(data.map(toUiFromDateRange));
       } catch (e: any) {
-        if (mounted) setError(e?.message || "Failed to load reservations");
+        setAllReservations([]);
+        setError(e?.message || "Failed to fetch reservations by date range");
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     };
 
     run();
-    return () => {
-      mounted = false;
+  }, [filterBy, startDate, endDate, token]);
+
+  // LOCATION: call suggest endpoint when keyword is present
+  useEffect(() => {
+    const run = async () => {
+      if (filterBy !== "LOCATION") return;
+      const kw = locationKeyword.trim();
+      if (!kw) {
+        setLocationSuggestions([]);
+        return;
+      }
+      if (!token) return;
+
+      try {
+        setError(null);
+        const suggestions = await reservationsAPI.getLocationSuggestions(kw, token);
+        setLocationSuggestions(suggestions);
+      } catch (e: any) {
+        setLocationSuggestions([]);
+        setError(e?.message || "Failed to fetch location suggestions");
+      }
     };
-  }, []);
 
-  const filteredReservations = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    run();
+  }, [filterBy, locationKeyword, token]);
 
-    return reservations.filter((r) => {
-      const matchesQuery = !q || r.id.toLowerCase().includes(q);
+  // Search by quote reference (server) then fallback client filter
+  const handleSearch = async () => {
+    const q = search.trim();
+    if (!q) return;
 
-      const matchesStatus =
-        !statusFilter || r.status.toLowerCase() === statusFilter.toLowerCase();
+    if (!token) {
+      setError("You must be logged in.");
+      return;
+    }
 
-      const matchesDate = !dateFilter || r.date.includes(dateFilter);
+    try {
+      setLoading(true);
+      setError(null);
 
-      return matchesQuery && matchesStatus && matchesDate;
-    });
-  }, [reservations, searchQuery, statusFilter, dateFilter]);
+      const one = await reservationsAPI.getUserProfileByQuoteReference(q, token);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-500 hover:bg-green-600";
-      case "Pending":
-        return "bg-yellow-500 hover:bg-yellow-600";
-      case "Cancelled":
-        return "bg-destructive hover:bg-destructive/90";
-      default:
-        return "bg-secondary";
+      if (one?.reservationId) {
+        setAllReservations([
+          {
+            id: one.reservationId,
+            vehicleModel: one.quoteReference ? `Quote ${one.quoteReference}` : "—",
+            location: "—",
+            destination: "—",
+            date: "—",
+            amount: formatMoney(one.amount),
+            status: mapStatus(one.status),
+          },
+        ]);
+        return;
+      }
+
+      // fallback client search
+      setAllReservations((prev) =>
+        prev.filter(
+          (r) =>
+            r.id.toLowerCase().includes(q.toLowerCase()) ||
+            r.vehicleModel.toLowerCase().includes(q.toLowerCase())
+        )
+      );
+    } catch {
+      setAllReservations((prev) =>
+        prev.filter((r) => r.id.toLowerCase().includes(q.toLowerCase()))
+      );
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Apply status filter client-side (endpoint space later)
+  const rows = useMemo(() => {
+    let list = [...allReservations];
+
+    if (statusFilter !== "ALL") {
+      list = list.filter((r) => r.status === statusFilter);
+    }
+
+    const q = search.trim().toLowerCase();
+    if (q && activeLock === "SEARCH") {
+      list = list.filter(
+        (r) => r.id.toLowerCase().includes(q) || r.vehicleModel.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [allReservations, statusFilter, search, activeLock]);
+
+  const disableSearch = activeLock !== null && activeLock !== "SEARCH";
+  const disableFilterBy =
+    activeLock !== null && activeLock !== "DATE" && activeLock !== "LOCATION";
+  const disableStatus = activeLock !== null && activeLock !== "STATUS";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Reservation Details</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Reservation Details</CardTitle>
 
-        {/* Search and Filters */}
+          {(activeLock || error) && (
+            <Button variant="outline" size="sm" onClick={resetAll}>
+              Reset
+            </Button>
+          )}
+        </div>
+
         <div className="flex flex-col md:flex-row gap-4 mt-4">
+          {/* Search box */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Reservation ID"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
+              disabled={disableSearch}
             />
           </div>
 
           <Button
-            variant="outline"
             className="gap-2 bg-primary text-white hover:bg-primary/90"
+            onClick={handleSearch}
+            disabled={disableSearch}
           >
             <Search className="w-4 h-4" />
             Search
           </Button>
 
-          <Button variant="outline" className="gap-2">
-            <Filter className="w-4 h-4" />
-            Filter By
-          </Button>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => setDateFilter("")}
-              title="(Placeholder) Date filter UI can be wired later"
-            >
-              Date
-              <ChevronDown className="w-4 h-4" />
+          {/* Filter By + dropdown */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="gap-2" disabled={disableFilterBy}>
+              <Filter className="w-4 h-4" />
+              Filter By
             </Button>
 
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => setStatusFilter("")}
-              title="(Placeholder) Status filter UI can be wired later"
+            <Select
+              value={filterBy}
+              onValueChange={(v) => {
+                const next = v as FilterBy;
+                setFilterBy(next);
+
+                setStartDate("");
+                setEndDate("");
+                setLocationKeyword("");
+                setLocationSuggestions([]);
+                setError(null);
+
+                if (next === "NONE") loadDefault();
+              }}
+              disabled={disableFilterBy}
             >
-              Status
-              <ChevronDown className="w-4 h-4" />
-            </Button>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NONE">None</SelectItem>
+                <SelectItem value="DATE">Date</SelectItem>
+                <SelectItem value="LOCATION">Location</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {/* DATE RANGE UI */}
+          <div className="flex items-center gap-2">
+            {filterBy === "DATE" ? (
+              <>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-[160px]"
+                />
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-[160px]"
+                />
+              </>
+            ) : (
+              <Button variant="outline" className="gap-2" disabled>
+                Date
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            )}
+
+            {/* LOCATION UI */}
+            {filterBy === "LOCATION" ? (
+              <Input
+                placeholder="Keyword e.g. New"
+                value={locationKeyword}
+                onChange={(e) => setLocationKeyword(e.target.value)}
+                className="w-[200px]"
+              />
+            ) : (
+              <Button variant="outline" className="gap-2" disabled>
+                Location
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Status dropdown should DISPLAY "Status" not "All" */}
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => setStatusFilter(v as any)}
+            disabled={disableStatus}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {/* Internal ALL, but UI label stays Status */}
+              <SelectItem value="ALL">Status</SelectItem>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Canceled">Canceled</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
+        {/* Location suggestions display */}
+        {filterBy === "LOCATION" && locationSuggestions.length > 0 && (
+          <div className="mt-3 text-sm text-muted-foreground">
+            Suggestions:{" "}
+            <span className="text-foreground">{locationSuggestions.join(", ")}</span>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent>
@@ -175,7 +417,6 @@ const ProfileReservations = () => {
           <div>Status</div>
         </div>
 
-        {/* States */}
         {loading && (
           <div className="py-10 text-center text-sm text-muted-foreground">
             Loading reservations...
@@ -183,60 +424,43 @@ const ProfileReservations = () => {
         )}
 
         {!loading && error && (
-          <div className="py-10 text-center text-sm text-destructive">
-            {error}
-          </div>
+          <div className="py-10 text-center text-sm text-destructive">{error}</div>
         )}
 
-        {!loading && !error && filteredReservations.length === 0 && (
+        {!loading && !error && rows.length === 0 && (
           <div className="py-10 text-center text-sm text-muted-foreground">
             No reservations found.
           </div>
         )}
 
-        {/* Reservation Items */}
-        {!loading && !error && filteredReservations.length > 0 && (
+        {!loading && !error && rows.length > 0 && (
           <div className="space-y-4 mt-4">
-            {filteredReservations.map((reservation) => (
+            {rows.map((r) => (
               <div
-                key={reservation.id}
+                key={r.id}
                 className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center py-4 border-b border-border last:border-0"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
                     <span className="text-xs font-medium">🚗</span>
                   </div>
-                  <span className="text-sm font-medium">
-                    {reservation.vehicleModel}
-                  </span>
+                  <span className="text-sm font-medium">{r.vehicleModel}</span>
                 </div>
 
-                <div className="text-sm text-muted-foreground">
-                  {reservation.location}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {reservation.destination}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {reservation.date}
-                </div>
-                <div className="text-sm font-medium">{reservation.amount}</div>
+                <div className="text-sm text-muted-foreground">{r.location}</div>
+                <div className="text-sm text-muted-foreground">{r.destination}</div>
+                <div className="text-sm text-muted-foreground">{r.date}</div>
+                <div className="text-sm font-medium">{r.amount}</div>
 
                 <div>
-                  <Badge
-                    className={`${getStatusColor(
-                      reservation.status
-                    )} text-white border-0`}
-                  >
-                    {reservation.status}
-                  </Badge>
+                  <Badge className={statusBadgeClass(r.status)}>{r.status}</Badge>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Pagination (UI kept, can be wired later) */}
+        {/* Pagination UI kept */}
         <div className="flex items-center justify-center gap-4 mt-8 pt-4 border-t border-border">
           <Button variant="outline" size="sm">
             Previous
