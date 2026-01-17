@@ -16,7 +16,6 @@ import {
 import { User, MapPin, Phone } from "lucide-react";
 import { getAutocomplete } from "@/services/mapService";
 
-
 const PRIMARY = "#E85C2B";
 
 type QuoteLike = {
@@ -57,54 +56,38 @@ type ReservationDraft = {
   shipmentDate?: string;
 };
 
-// -------------------------
-// Country Code Fetch (No manual list)
-// -------------------------
 type CountryCodeOption = {
-  label: string; // "Nigeria (+234)"
-  value: string; // "+234"
+  label: string;
+  value: string;
 };
 
 const buildCountryCodes = (data: any[]): CountryCodeOption[] => {
   const results: CountryCodeOption[] = [];
 
   for (const c of data || []) {
-    const root = c?.idd?.root; // e.g. "+234"
+    const root = c?.idd?.root;
     const suffixes: string[] = c?.idd?.suffixes || [];
     const name = c?.name?.common || c?.name?.official || "Unknown";
-
     if (!root) continue;
 
-    // Some countries have multiple suffixes; keep the most common:
     if (suffixes.length === 0) {
       results.push({ label: `${name} (${root})`, value: root });
     } else {
-      // if suffixes exist, take the first (common usage)
       const code = `${root}${suffixes[0]}`;
       results.push({ label: `${name} (${code})`, value: code });
     }
   }
 
-  // Deduplicate by value
   const map = new Map<string, CountryCodeOption>();
-  for (const r of results) {
-    if (!map.has(r.value)) map.set(r.value, r);
-  }
+  for (const r of results) if (!map.has(r.value)) map.set(r.value, r);
 
-  // Sort by label
   return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
 };
 
-const splitPhone = (
-  full: string | undefined
-): { code: string; number: string } => {
+const splitPhone = (full: string | undefined): { code: string; number: string } => {
   const v = (full || "").trim();
-  // Expect formats like "+234 090123..." or "+234090123..."
   const match = v.match(/^(\+\d{1,4})\s*(.*)$/);
-  if (match) {
-    return { code: match[1], number: (match[2] || "").trim() };
-  }
-  // fallback
+  if (match) return { code: match[1], number: (match[2] || "").trim() };
   return { code: "+1", number: v };
 };
 
@@ -117,11 +100,7 @@ const PhoneWithCountry: React.FC<{
   return (
     <div className="flex gap-2">
       <div className="w-[140px]">
-        {/* keep consistent look using shadcn Select */}
-        <Select
-          value={value.code}
-          onValueChange={(v) => onChange({ ...value, code: v })}
-        >
+        <Select value={value.code} onValueChange={(v) => onChange({ ...value, code: v })}>
           <SelectTrigger>
             <SelectValue placeholder="+1" />
           </SelectTrigger>
@@ -148,9 +127,6 @@ const PhoneWithCountry: React.FC<{
   );
 };
 
-// -------------------------
-// Autocomplete for Address Fields
-// -------------------------
 const normalizeAutocomplete = (data: any): string[] => {
   if (!data) return [];
   if (Array.isArray(data) && data.every((x) => typeof x === "string")) return data;
@@ -185,7 +161,6 @@ const AddressAutocompleteInput: React.FC<{
   const debounceRef = useRef<number | null>(null);
   const queryRef = useRef<string>("");
 
-  // close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (!containerRef.current) return;
@@ -217,7 +192,6 @@ const AddressAutocompleteInput: React.FC<{
         queryRef.current = q;
 
         const res = await getAutocomplete(q);
-        // ignore stale
         if (queryRef.current !== q) return;
 
         const normalized = normalizeAutocomplete(res).slice(0, 8);
@@ -307,7 +281,16 @@ const OnlineReservationForm: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Quote from navigation state OR session storage
+  const mode = (location.state as any)?.mode as "edit" | undefined;
+  const isEditMode = mode === "edit";
+
+  // ✅ FIX: if NOT edit mode, wipe any previous draft so new users don't inherit it
+  useEffect(() => {
+    if (!isEditMode) {
+      sessionStorage.removeItem("reservationDraft");
+    }
+  }, [isEditMode]);
+
   const quote = useMemo<QuoteLike | null>(() => {
     const fromState = (location.state as any)?.quote;
     if (fromState) return fromState;
@@ -320,7 +303,6 @@ const OnlineReservationForm: React.FC = () => {
     }
   }, [location.state]);
 
-  // Draft from navigation state OR session storage (Edit backflow)
   const draftFromNav = useMemo<ReservationDraft | null>(() => {
     const d = (location.state as any)?.reservationDraft;
     return d ?? null;
@@ -335,9 +317,9 @@ const OnlineReservationForm: React.FC = () => {
     }
   }, []);
 
-  const initialDraft = draftFromNav || draftFromStorage;
+  // ✅ FIX: only hydrate draft when editing from PaymentProtection
+  const initialDraft = isEditMode ? (draftFromNav || draftFromStorage) : null;
 
-  // fetch country codes
   const [countryCodes, setCountryCodes] = useState<CountryCodeOption[]>([
     { label: "United States (+1)", value: "+1" },
   ]);
@@ -346,15 +328,12 @@ const OnlineReservationForm: React.FC = () => {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch(
-          "https://restcountries.com/v3.1/all?fields=name,idd"
-        );
+        const res = await fetch("https://restcountries.com/v3.1/all?fields=name,idd");
         const json = await res.json();
         const options = buildCountryCodes(json);
 
         if (!alive) return;
 
-        // Put Nigeria and USA at top if present (nice UX)
         const top = ["+234", "+1"];
         const prioritized = [
           ...options.filter((o) => top.includes(o.value)),
@@ -388,12 +367,10 @@ const OnlineReservationForm: React.FC = () => {
   const shipmentDateFromQuote =
     quote.shipmentDate || quote.pickupdate || quote.pickupDate || "N/A";
 
-  // form state
   const [carrierType, setCarrierType] = useState<"open" | "enclosed">(
     (initialDraft?.carrierType as any) || "open"
   );
 
-  // Pickup
   const [pickupSameAsPrimary, setPickupSameAsPrimary] = useState(false);
   const [pickupLocationType, setPickupLocationType] = useState<
     "RESIDENTIAL" | "BUSINESS"
@@ -407,9 +384,8 @@ const OnlineReservationForm: React.FC = () => {
     initialDraft?.pickupAddress || ""
   );
 
-  // ✅ LOCKED: location always from quote
   const [pickupLocation, setPickupLocation] = useState<string>(
-    quote.pickupLocation || ""
+    initialDraft?.pickupLocation || quote.pickupLocation || ""
   );
 
   const pickupPrimarySplit = splitPhone(
@@ -429,7 +405,6 @@ const OnlineReservationForm: React.FC = () => {
     number: string;
   }>(pickupSecondarySplit);
 
-  // Delivery
   const [deliverySameAsPrimary, setDeliverySameAsPrimary] = useState(false);
   const [deliveryResidentialType, setDeliveryResidentialType] = useState<
     "RESIDENTIAL" | "BUSINESS"
@@ -443,9 +418,8 @@ const OnlineReservationForm: React.FC = () => {
     initialDraft?.deliveryAddress || ""
   );
 
-  // ✅ LOCKED: location always from quote
   const [deliveryLocation, setDeliveryLocation] = useState<string>(
-    quote.deliveryLocation || ""
+    initialDraft?.deliveryLocation || quote.deliveryLocation || ""
   );
 
   const deliveryPrimarySplit = splitPhone(
@@ -465,7 +439,6 @@ const OnlineReservationForm: React.FC = () => {
     number: string;
   }>(deliverySecondarySplit);
 
-  // Vehicle
   const [vehicle, setVehicle] = useState<string>(() => {
     if (initialDraft?.vehicle) return initialDraft.vehicle;
     if (!quote.vehicle) return "";
@@ -476,13 +449,13 @@ const OnlineReservationForm: React.FC = () => {
     initialDraft?.condition || "Runs & Drive"
   );
 
-  // keep locked locations synced if quote changes
   useEffect(() => {
-    setPickupLocation(quote.pickupLocation || "");
-    setDeliveryLocation(quote.deliveryLocation || "");
-  }, [quote.pickupLocation, quote.deliveryLocation]);
+    if (!isEditMode) {
+      setPickupLocation(quote.pickupLocation || "");
+      setDeliveryLocation(quote.deliveryLocation || "");
+    }
+  }, [isEditMode, quote.pickupLocation, quote.deliveryLocation]);
 
-  // sync behavior for "same as primary contact"
   useEffect(() => {
     if (pickupSameAsPrimary) {
       if (deliveryContactName) setPickupContactName(deliveryContactName);
@@ -511,8 +484,10 @@ const OnlineReservationForm: React.FC = () => {
       return;
     }
 
-    const pickupPrimaryFull = `${pickupPrimaryPhone.code} ${pickupPrimaryPhone.number}`.trim();
-    const deliveryPrimaryFull = `${deliveryPrimaryPhone.code} ${deliveryPrimaryPhone.number}`.trim();
+    const pickupPrimaryFull =
+      `${pickupPrimaryPhone.code} ${pickupPrimaryPhone.number}`.trim();
+    const deliveryPrimaryFull =
+      `${deliveryPrimaryPhone.code} ${deliveryPrimaryPhone.number}`.trim();
 
     const pickupSecondaryFull = pickupSecondaryPhone.number
       ? `${pickupSecondaryPhone.code} ${pickupSecondaryPhone.number}`.trim()
@@ -522,7 +497,6 @@ const OnlineReservationForm: React.FC = () => {
       ? `${deliverySecondaryPhone.code} ${deliverySecondaryPhone.number}`.trim()
       : undefined;
 
-    // Required fields only
     if (
       !pickupContactName ||
       !pickupAddress ||
@@ -540,18 +514,21 @@ const OnlineReservationForm: React.FC = () => {
       return;
     }
 
+    const finalPickupLocation = isEditMode ? pickupLocation : quote.pickupLocation;
+    const finalDeliveryLocation = isEditMode ? deliveryLocation : quote.deliveryLocation;
+
     const reservationDraft: ReservationDraft = {
       quoteReference: quote.quoteReference,
 
       pickupAddress,
-      pickupLocation, // ✅ locked
+      pickupLocation: finalPickupLocation,
       pickupContactName,
       pickupContactPrimaryPhoneNumber: pickupPrimaryFull,
       pickupContactSecondaryPhoneNumber: pickupSecondaryFull,
       pickUpResidenceType: pickupLocationType,
 
       deliveryAddress,
-      deliveryLocation, // ✅ locked
+      deliveryLocation: finalDeliveryLocation,
       deliveryContactName,
       deliveryContactPrimaryPhoneNumber: deliveryPrimaryFull,
       deliveryContactSecondaryPhoneNumber: deliverySecondaryFull,
@@ -563,7 +540,7 @@ const OnlineReservationForm: React.FC = () => {
       shipmentDate: shipmentDateFromQuote,
     };
 
-    // persist draft for Edit backflow + refresh safety
+    // ✅ Store draft only to support edit flow (PaymentProtection -> Edit)
     sessionStorage.setItem("reservationDraft", JSON.stringify(reservationDraft));
 
     navigate("/payment-protection", {
@@ -601,9 +578,7 @@ const OnlineReservationForm: React.FC = () => {
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                           s.isOn ? "text-white" : "bg-gray-300 text-gray-600"
                         }`}
-                        style={{
-                          backgroundColor: s.isOn ? PRIMARY : undefined,
-                        }}
+                        style={{ backgroundColor: s.isOn ? PRIMARY : undefined }}
                       >
                         {s.n}
                       </div>
@@ -763,7 +738,6 @@ const OnlineReservationForm: React.FC = () => {
                   <label className="block text-sm text-gray-600 mb-1">
                     Pickup Address
                   </label>
-                  {/* ✅ AUTOCOMPLETE */}
                   <AddressAutocompleteInput
                     value={pickupAddress}
                     onChange={setPickupAddress}
@@ -782,8 +756,9 @@ const OnlineReservationForm: React.FC = () => {
                       placeholder="Enter pickup location"
                       className="pl-10"
                       value={pickupLocation}
-                      disabled
-                      readOnly
+                      onChange={(e) => setPickupLocation(e.target.value)}
+                      disabled={!isEditMode}
+                      readOnly={!isEditMode}
                     />
                   </div>
                 </div>
@@ -799,19 +774,19 @@ const OnlineReservationForm: React.FC = () => {
                     value={pickupPrimaryPhone}
                     onChange={setPickupPrimaryPhone}
                     options={countryCodes}
-                    placeholder="e.g. 09012345678"
+                    placeholder="e.g. 12345678"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
-                    Secondary Phone Number (Optional)
+                    Secondary Phone Number
                   </label>
                   <PhoneWithCountry
                     value={pickupSecondaryPhone}
                     onChange={setPickupSecondaryPhone}
                     options={countryCodes}
-                    placeholder="e.g. 09012345678"
+                    placeholder="e.g. 12345678"
                   />
                 </div>
               </div>
@@ -870,7 +845,7 @@ const OnlineReservationForm: React.FC = () => {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
-                      placeholder="Enter your full name"
+                      placeholder="Enter full name"
                       className="pl-10"
                       value={deliveryContactName}
                       onChange={(e) => setDeliveryContactName(e.target.value)}
@@ -885,7 +860,6 @@ const OnlineReservationForm: React.FC = () => {
                   <label className="block text-sm text-gray-600 mb-1">
                     Delivery Address
                   </label>
-                  {/* ✅ AUTOCOMPLETE */}
                   <AddressAutocompleteInput
                     value={deliveryAddress}
                     onChange={setDeliveryAddress}
@@ -904,8 +878,9 @@ const OnlineReservationForm: React.FC = () => {
                       placeholder="Enter delivery location"
                       className="pl-10"
                       value={deliveryLocation}
-                      disabled
-                      readOnly
+                      onChange={(e) => setDeliveryLocation(e.target.value)}
+                      disabled={!isEditMode}
+                      readOnly={!isEditMode}
                     />
                   </div>
                 </div>
@@ -927,13 +902,13 @@ const OnlineReservationForm: React.FC = () => {
 
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
-                    Secondary Phone Number (Optional)
+                    Secondary Phone Number
                   </label>
                   <PhoneWithCountry
                     value={deliverySecondaryPhone}
                     onChange={setDeliverySecondaryPhone}
                     options={countryCodes}
-                    placeholder="e.g. 08123456789"
+                    placeholder="e.g. 0123456789"
                   />
                 </div>
               </div>
@@ -941,24 +916,26 @@ const OnlineReservationForm: React.FC = () => {
 
             {/* Vehicle Details */}
             <div
-              className="text-white px-4 py-3 rounded-t-lg"
-              style={{ backgroundColor: PRIMARY }}
-            >
-              <span className="font-medium">Vehicle Details</span>
-            </div>
+  className="text-white px-4 py-3 rounded-t-lg"
+  style={{ backgroundColor: PRIMARY }}
+>
+  <span className="font-medium">Vehicle Details</span>
+</div>
 
-            <div className="border border-t-0 rounded-b-lg p-4 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Vehicle
-                  </label>
-                  <Input
-                    placeholder="Vehicle name"
-                    value={vehicle}
-                    onChange={(e) => setVehicle(e.target.value)}
-                  />
-                </div>
+<div className="border border-t-0 rounded-b-lg p-4 mb-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">
+        Vehicle
+      </label>
+      <Input
+        placeholder="Vehicle name"
+        value={vehicle}
+        readOnly
+        disabled
+        className="bg-gray-100 cursor-not-allowed"
+      />
+    </div>
 
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
@@ -970,7 +947,7 @@ const OnlineReservationForm: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Runs & Drive">Runs & Drive</SelectItem>
-                      <SelectItem value="Non-Running">Non-Running</SelectItem>
+                      {/* <SelectItem value="Non-Running">Non-Running</SelectItem> */}
                     </SelectContent>
                   </Select>
                 </div>

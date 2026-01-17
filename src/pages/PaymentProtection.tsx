@@ -63,7 +63,6 @@ const PaymentProtection: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Pull from navigation state FIRST, fallback to sessionStorage
   const state = useMemo<ProtectionState>(() => {
     return (location.state as ProtectionState) || {};
   }, [location.state]);
@@ -91,7 +90,6 @@ const PaymentProtection: React.FC = () => {
   const reservationDraft = payload.reservationDraft;
   const quoteReference = payload.quoteReference;
 
-  // ✅ compute ship date from whatever your quote provides
   const shipDate =
     reservationDraft?.shipmentDate ||
     quote?.shipmentDate ||
@@ -100,44 +98,30 @@ const PaymentProtection: React.FC = () => {
     quote?.deliveryDate ||
     "N/A";
 
-  // ✅ vehicle detail from quote (or reservationDraft vehicle string)
   const vehicleText =
     quote?.vehicle
       ? `${quote.vehicle.brand} ${quote.vehicle.model} ${quote.vehicle.year}`
       : reservationDraft?.vehicle || "N/A";
 
-  // ✅ Quote computed totals (use whatever your backend sends)
   const shippingRate = typeof quote?.price === "number" ? quote.price : undefined;
 
-  // Coverage selection state
   const [coverageAmount, setCoverageAmount] = useState<
     "none" | "partial" | "full" | ""
   >("");
 
-  // ✅ Coverage cost should be computed from quote (not hardcoded)
-  // If you later get real coverage pricing from backend, replace this logic.
   const coverageCost = useMemo(() => {
-    // If you want coverage cost derived from quote price:
-    // - none = 0
-    // - partial = 5% of quote price
-    // - full = 10% of quote price
-    // Feel free to adjust.
     const base = shippingRate ?? 0;
     if (coverageAmount === "partial") return Math.round(base * 0.05);
     if (coverageAmount === "full") return Math.round(base * 0.1);
     return 0;
   }, [coverageAmount, shippingRate]);
 
-  // ✅ Total due now / quote computed (you can also show downPayment etc if needed)
   const totalToPayNow = useMemo(() => {
-    // If your flow charges downPayment at this stage, use quote.downPayment.
-    // Otherwise, use shippingRate + coverageCost.
     const base = shippingRate ?? 0;
     return base + coverageCost;
   }, [shippingRate, coverageCost]);
 
   useEffect(() => {
-    // Must have reservationDraft and quoteReference at minimum
     if (!quoteReference || !reservationDraft) {
       toast({
         title: "Missing reservation data",
@@ -148,7 +132,6 @@ const PaymentProtection: React.FC = () => {
       return;
     }
 
-    // ✅ persist so refresh doesn't lose it
     sessionStorage.setItem(
       "pendingPaymentProtection",
       JSON.stringify({
@@ -162,16 +145,15 @@ const PaymentProtection: React.FC = () => {
   const handleEdit = () => {
     if (!reservationDraft) return;
 
-    // ✅ Save draft so OnlineReservationForm can re-hydrate
+    // ✅ store draft only for edit flow
     sessionStorage.setItem("reservationDraft", JSON.stringify(reservationDraft));
 
-    // ✅ Go back to reservation page with same data intact
     navigate("/online-reservation", {
       state: {
-        // keep quote if available so the top quote card still shows right
         quote,
         reservationDraft,
         from: "payment-protection",
+        mode: "edit",
       },
     });
   };
@@ -179,10 +161,6 @@ const PaymentProtection: React.FC = () => {
   const handleProceedToPayment = () => {
     if (!quoteReference || !reservationDraft) return;
 
-    // TODO: Save coverage selection to backend if you have endpoint
-    // await api.saveCoverageSelection({ quoteReference, coverageAmount, coverageCost });
-
-    // ✅ Keep everything for the next step
     sessionStorage.setItem(
       "pendingReservationPayment",
       JSON.stringify({
@@ -219,7 +197,6 @@ const PaymentProtection: React.FC = () => {
           <div className="mb-8">
             <div className="flex items-center justify-center">
               <div className="flex items-center">
-                {/* Step 1 - Completed */}
                 <div className="flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-[#E85C2B] text-white flex items-center justify-center text-sm font-medium">
                     1
@@ -230,7 +207,6 @@ const PaymentProtection: React.FC = () => {
                 </div>
                 <div className="w-16 md:w-24 h-1 bg-[#E85C2B] mx-2" />
 
-                {/* Step 2 - Completed */}
                 <div className="flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-[#E85C2B] text-white flex items-center justify-center text-sm font-medium">
                     2
@@ -239,7 +215,6 @@ const PaymentProtection: React.FC = () => {
                 </div>
                 <div className="w-16 md:w-24 h-1 bg-[#E85C2B] mx-2" />
 
-                {/* Step 3 - Active */}
                 <div className="flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-[#E85C2B] text-white flex items-center justify-center text-sm font-medium">
                     3
@@ -250,7 +225,6 @@ const PaymentProtection: React.FC = () => {
                 </div>
                 <div className="w-16 md:w-24 h-1 bg-gray-300 mx-2" />
 
-                {/* Step 4 - Pending */}
                 <div className="flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-sm font-medium">
                     4
@@ -287,7 +261,9 @@ const PaymentProtection: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
                   <p className="text-gray-500 text-sm">Shipper Details</p>
-                  <p className="font-medium">{reservationDraft.pickupContactName}</p>
+                  <p className="font-medium">
+                    {reservationDraft.pickupContactName}
+                  </p>
                 </div>
 
                 <div>
@@ -375,7 +351,6 @@ const PaymentProtection: React.FC = () => {
                   <div>
                     <p className="text-gray-500 text-sm mb-1">Coverage Amount</p>
                     <p className="font-large">
-                      
                       {typeof shippingRate === "number"
                         ? `$${shippingRate}`
                         : "N/A"}
@@ -385,10 +360,10 @@ const PaymentProtection: React.FC = () => {
                   <div>
                     <p className="text-gray-500 text-sm mb-1">Coverage Cost</p>
                     <p className="font-medium">
-                      {typeof shippingRate === "number" ? `$${totalToPayNow}` : "N/A"}
+                      {typeof shippingRate === "number"
+                        ? `$${totalToPayNow}`
+                        : "N/A"}
                     </p>
-
-                    
                   </div>
                 </div>
               </div>
