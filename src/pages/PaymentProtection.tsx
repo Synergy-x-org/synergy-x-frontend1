@@ -374,25 +374,8 @@ const PaymentProtection: React.FC = () => {
 
                   <div>
                     <p className="text-gray-500 text-sm mb-1">Coverage Amount</p>
-                    <Select
-                      value={coverageAmount}
-                      onValueChange={(v) =>
-                        setCoverageAmount(v as "none" | "partial" | "full")
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Coverage" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Additional Coverage</SelectItem>
-                        <SelectItem value="partial">Partial Coverage</SelectItem>
-                        <SelectItem value="full">Full Coverage</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {/* ✅ show computed quote cost (keeps UI simple) */}
-                    <p className="text-xs text-gray-500 mt-2">
-                      Quote computed:{" "}
+                    <p className="font-large">
+                      
                       {typeof shippingRate === "number"
                         ? `$${shippingRate}`
                         : "N/A"}
@@ -402,14 +385,10 @@ const PaymentProtection: React.FC = () => {
                   <div>
                     <p className="text-gray-500 text-sm mb-1">Coverage Cost</p>
                     <p className="font-medium">
-                      {typeof shippingRate === "number" ? `$${coverageCost}` : "N/A"}
-                    </p>
-
-                    {/* ✅ also show final computed total (still not changing layout) */}
-                    <p className="text-xs text-gray-500 mt-2">
-                      Total:{" "}
                       {typeof shippingRate === "number" ? `$${totalToPayNow}` : "N/A"}
                     </p>
+
+                    
                   </div>
                 </div>
               </div>

@@ -189,4 +189,6 @@ export const reservationsAPI = {
     if (!res.ok) throw new Error(data.message || "Failed to fetch suggestions");
     return Array.isArray(data.data) ? data.data : [];
   },
+
+  
 };
