@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { User, MapPin, Phone } from "lucide-react";
-import { getAutocomplete } from "@/services/mapService"; // ✅ use your endpoint
+import { getAutocomplete } from "@/services/mapService";
+
 
 const PRIMARY = "#E85C2B";
 
@@ -33,25 +34,133 @@ type QuoteLike = {
   shipmentDate?: string;
 };
 
-/**
- * ✅ Autocomplete helper:
- * Your backend may return different shapes (array of strings, array of objects, Google-like).
- * This function normalizes to string[] safely.
- */
+type ReservationDraft = {
+  quoteReference: string;
+
+  pickupAddress: string;
+  pickupLocation: string;
+  pickupContactName: string;
+  pickupContactPrimaryPhoneNumber: string;
+  pickupContactSecondaryPhoneNumber?: string;
+  pickUpResidenceType: "RESIDENTIAL" | "BUSINESS";
+
+  deliveryAddress: string;
+  deliveryLocation: string;
+  deliveryContactName: string;
+  deliveryContactPrimaryPhoneNumber: string;
+  deliveryContactSecondaryPhoneNumber?: string;
+  deliveryResidentialType: "RESIDENTIAL" | "BUSINESS";
+
+  carrierType?: "open" | "enclosed";
+  vehicle?: string;
+  condition?: string;
+  shipmentDate?: string;
+};
+
+// -------------------------
+// Country Code Fetch (No manual list)
+// -------------------------
+type CountryCodeOption = {
+  label: string; // "Nigeria (+234)"
+  value: string; // "+234"
+};
+
+const buildCountryCodes = (data: any[]): CountryCodeOption[] => {
+  const results: CountryCodeOption[] = [];
+
+  for (const c of data || []) {
+    const root = c?.idd?.root; // e.g. "+234"
+    const suffixes: string[] = c?.idd?.suffixes || [];
+    const name = c?.name?.common || c?.name?.official || "Unknown";
+
+    if (!root) continue;
+
+    // Some countries have multiple suffixes; keep the most common:
+    if (suffixes.length === 0) {
+      results.push({ label: `${name} (${root})`, value: root });
+    } else {
+      // if suffixes exist, take the first (common usage)
+      const code = `${root}${suffixes[0]}`;
+      results.push({ label: `${name} (${code})`, value: code });
+    }
+  }
+
+  // Deduplicate by value
+  const map = new Map<string, CountryCodeOption>();
+  for (const r of results) {
+    if (!map.has(r.value)) map.set(r.value, r);
+  }
+
+  // Sort by label
+  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const splitPhone = (
+  full: string | undefined
+): { code: string; number: string } => {
+  const v = (full || "").trim();
+  // Expect formats like "+234 090123..." or "+234090123..."
+  const match = v.match(/^(\+\d{1,4})\s*(.*)$/);
+  if (match) {
+    return { code: match[1], number: (match[2] || "").trim() };
+  }
+  // fallback
+  return { code: "+1", number: v };
+};
+
+const PhoneWithCountry: React.FC<{
+  value: { code: string; number: string };
+  onChange: (next: { code: string; number: string }) => void;
+  options: CountryCodeOption[];
+  placeholder: string;
+}> = ({ value, onChange, options, placeholder }) => {
+  return (
+    <div className="flex gap-2">
+      <div className="w-[140px]">
+        {/* keep consistent look using shadcn Select */}
+        <Select
+          value={value.code}
+          onValueChange={(v) => onChange({ ...value, code: v })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="+1" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[280px]">
+            {options.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex-1 relative">
+        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          className="pl-10"
+          placeholder={placeholder}
+          value={value.number}
+          onChange={(e) => onChange({ ...value, number: e.target.value })}
+        />
+      </div>
+    </div>
+  );
+};
+
+// -------------------------
+// Autocomplete for Address Fields
+// -------------------------
 const normalizeAutocomplete = (data: any): string[] => {
   if (!data) return [];
-
-  // If API returns: ["Abuja", "Abuja Municipal", ...]
   if (Array.isArray(data) && data.every((x) => typeof x === "string")) return data;
 
-  // If API returns: { predictions: [{ description: "..." }, ...] }
   if (Array.isArray(data?.predictions)) {
     return data.predictions
       .map((p: any) => p?.description)
       .filter((v: any) => typeof v === "string");
   }
 
-  // If API returns: [{ description: "..." }, ...]
   if (Array.isArray(data) && data.some((x) => typeof x === "object")) {
     return data
       .map((x: any) => x?.description || x?.name || x?.formatted_address)
@@ -61,36 +170,22 @@ const normalizeAutocomplete = (data: any): string[] => {
   return [];
 };
 
-/**
- * ✅ Minimal dropdown that does NOT change your UI layout:
- * It's just an absolutely positioned list under the input.
- */
-type AutoFieldProps = {
+const AddressAutocompleteInput: React.FC<{
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
-  leftIcon: React.ReactNode; // keep your MapPin icon etc
-  inputAriaLabel: string;
-};
-
-const AutoCompleteInput: React.FC<AutoFieldProps> = ({
-  value,
-  onChange,
-  placeholder,
-  leftIcon,
-  inputAriaLabel,
-}) => {
+  ariaLabel: string;
+}> = ({ value, onChange, placeholder, ariaLabel }) => {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<string[]>([]);
-  const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [loading, setLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const lastQueryRef = useRef<string>("");
-  const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
+  const queryRef = useRef<string>("");
 
-  // Close on outside click
+  // close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (!containerRef.current) return;
@@ -103,52 +198,36 @@ const AutoCompleteInput: React.FC<AutoFieldProps> = ({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const runSearch = (q: string) => {
-    const query = q.trim();
-    onChange(q);
+  const runSearch = (raw: string) => {
+    onChange(raw);
 
-    // guard: only search after a few chars
-    if (query.length < 3) {
+    const q = raw.trim();
+    if (q.length < 3) {
       setItems([]);
       setOpen(false);
       setActiveIndex(-1);
       return;
     }
 
-    // debounce
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(async () => {
-      // prevent duplicate calls for same query
-      if (lastQueryRef.current === query) {
-        setOpen(true);
-        return;
-      }
-      lastQueryRef.current = query;
-
       try {
         setLoading(true);
         setOpen(true);
+        queryRef.current = q;
 
-        // cancel prior request if any
-        if (abortRef.current) abortRef.current.abort();
-        abortRef.current = new AbortController();
+        const res = await getAutocomplete(q);
+        // ignore stale
+        if (queryRef.current !== q) return;
 
-        // Your getAutocomplete doesn't accept signal; that's okay.
-        // We'll still abort locally by ignoring stale responses:
-        const res = await getAutocomplete(query);
-
-        // ignore stale responses
-        if (lastQueryRef.current !== query) return;
-
-        const normalized = normalizeAutocomplete(res);
-        setItems(normalized.slice(0, 8));
+        const normalized = normalizeAutocomplete(res).slice(0, 8);
+        setItems(normalized);
         setActiveIndex(-1);
-      } catch (e: any) {
-        // ignore abort-like cases; otherwise, close dropdown quietly
+      } catch {
         setItems([]);
         setOpen(false);
       } finally {
-        if (lastQueryRef.current === query) setLoading(false);
+        if (queryRef.current === q) setLoading(false);
       }
     }, 250);
   };
@@ -165,16 +244,10 @@ const AutoCompleteInput: React.FC<AutoFieldProps> = ({
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((prev) => {
-        const next = prev + 1;
-        return next >= items.length ? 0 : next;
-      });
+      setActiveIndex((prev) => (prev + 1 >= items.length ? 0 : prev + 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIndex((prev) => {
-        const next = prev - 1;
-        return next < 0 ? items.length - 1 : next;
-      });
+      setActiveIndex((prev) => (prev - 1 < 0 ? items.length - 1 : prev - 1));
     } else if (e.key === "Enter") {
       if (activeIndex >= 0 && activeIndex < items.length) {
         e.preventDefault();
@@ -188,10 +261,9 @@ const AutoCompleteInput: React.FC<AutoFieldProps> = ({
 
   return (
     <div className="relative" ref={containerRef}>
-      {/* keep same UI: icon + Input with pl-10 */}
-      {leftIcon}
+      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
       <Input
-        aria-label={inputAriaLabel}
+        aria-label={ariaLabel}
         placeholder={placeholder}
         className="pl-10"
         value={value}
@@ -203,18 +275,11 @@ const AutoCompleteInput: React.FC<AutoFieldProps> = ({
         autoComplete="off"
       />
 
-      {/* dropdown (minimal, doesn't change layout) */}
       {open && (loading || items.length > 0) && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow">
           {loading && (
             <div className="px-3 py-2 text-sm text-muted-foreground">
               Searching...
-            </div>
-          )}
-
-          {!loading && items.length === 0 && (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              No suggestions
             </div>
           )}
 
@@ -226,10 +291,7 @@ const AutoCompleteInput: React.FC<AutoFieldProps> = ({
                 className={`w-full text-left px-3 py-2 text-sm hover:bg-muted ${
                   idx === activeIndex ? "bg-muted" : ""
                 }`}
-                onMouseDown={(e) => {
-                  // prevent input blur before click
-                  e.preventDefault();
-                }}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => commit(it)}
               >
                 {it}
@@ -245,6 +307,7 @@ const OnlineReservationForm: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Quote from navigation state OR session storage
   const quote = useMemo<QuoteLike | null>(() => {
     const fromState = (location.state as any)?.quote;
     if (fromState) return fromState;
@@ -257,6 +320,58 @@ const OnlineReservationForm: React.FC = () => {
     }
   }, [location.state]);
 
+  // Draft from navigation state OR session storage (Edit backflow)
+  const draftFromNav = useMemo<ReservationDraft | null>(() => {
+    const d = (location.state as any)?.reservationDraft;
+    return d ?? null;
+  }, [location.state]);
+
+  const draftFromStorage = useMemo<ReservationDraft | null>(() => {
+    try {
+      const s = sessionStorage.getItem("reservationDraft");
+      return s ? (JSON.parse(s) as ReservationDraft) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const initialDraft = draftFromNav || draftFromStorage;
+
+  // fetch country codes
+  const [countryCodes, setCountryCodes] = useState<CountryCodeOption[]>([
+    { label: "United States (+1)", value: "+1" },
+  ]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,idd"
+        );
+        const json = await res.json();
+        const options = buildCountryCodes(json);
+
+        if (!alive) return;
+
+        // Put Nigeria and USA at top if present (nice UX)
+        const top = ["+234", "+1"];
+        const prioritized = [
+          ...options.filter((o) => top.includes(o.value)),
+          ...options.filter((o) => !top.includes(o.value)),
+        ];
+
+        setCountryCodes(prioritized);
+      } catch {
+        // keep default
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (!quote) {
       toast({
@@ -268,44 +383,111 @@ const OnlineReservationForm: React.FC = () => {
     }
   }, [quote, navigate]);
 
+  if (!quote) return null;
+
   const shipmentDateFromQuote =
-    quote?.shipmentDate || quote?.pickupdate || quote?.pickupDate || "N/A";
+    quote.shipmentDate || quote.pickupdate || quote.pickupDate || "N/A";
 
   // form state
-  const [carrierType, setCarrierType] = useState<"open" | "enclosed">("open");
+  const [carrierType, setCarrierType] = useState<"open" | "enclosed">(
+    (initialDraft?.carrierType as any) || "open"
+  );
 
   // Pickup
   const [pickupSameAsPrimary, setPickupSameAsPrimary] = useState(false);
-  const [pickupLocationType, setPickupLocationType] =
-    useState<"RESIDENTIAL" | "BUSINESS">("RESIDENTIAL");
-  const [pickupContactName, setPickupContactName] = useState("");
-  const [pickupAddress, setPickupAddress] = useState("");
-  const [pickupLocation, setPickupLocation] = useState("");
-  const [pickupPrimaryPhone, setPickupPrimaryPhone] = useState("");
-  const [pickupSecondaryPhone, setPickupSecondaryPhone] = useState("");
+  const [pickupLocationType, setPickupLocationType] = useState<
+    "RESIDENTIAL" | "BUSINESS"
+  >(initialDraft?.pickUpResidenceType || "RESIDENTIAL");
+
+  const [pickupContactName, setPickupContactName] = useState(
+    initialDraft?.pickupContactName || ""
+  );
+
+  const [pickupAddress, setPickupAddress] = useState(
+    initialDraft?.pickupAddress || ""
+  );
+
+  // ✅ LOCKED: location always from quote
+  const [pickupLocation, setPickupLocation] = useState<string>(
+    quote.pickupLocation || ""
+  );
+
+  const pickupPrimarySplit = splitPhone(
+    initialDraft?.pickupContactPrimaryPhoneNumber
+  );
+  const pickupSecondarySplit = splitPhone(
+    initialDraft?.pickupContactSecondaryPhoneNumber
+  );
+
+  const [pickupPrimaryPhone, setPickupPrimaryPhone] = useState<{
+    code: string;
+    number: string;
+  }>(pickupPrimarySplit);
+
+  const [pickupSecondaryPhone, setPickupSecondaryPhone] = useState<{
+    code: string;
+    number: string;
+  }>(pickupSecondarySplit);
 
   // Delivery
   const [deliverySameAsPrimary, setDeliverySameAsPrimary] = useState(false);
-  const [deliveryResidentialType, setDeliveryResidentialType] =
-    useState<"RESIDENTIAL" | "BUSINESS">("RESIDENTIAL");
-  const [deliveryContactName, setDeliveryContactName] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryLocation, setDeliveryLocation] = useState("");
-  const [deliveryPrimaryPhone, setDeliveryPrimaryPhone] = useState("");
-  const [deliverySecondaryPhone, setDeliverySecondaryPhone] = useState("");
+  const [deliveryResidentialType, setDeliveryResidentialType] = useState<
+    "RESIDENTIAL" | "BUSINESS"
+  >(initialDraft?.deliveryResidentialType || "RESIDENTIAL");
+
+  const [deliveryContactName, setDeliveryContactName] = useState(
+    initialDraft?.deliveryContactName || ""
+  );
+
+  const [deliveryAddress, setDeliveryAddress] = useState(
+    initialDraft?.deliveryAddress || ""
+  );
+
+  // ✅ LOCKED: location always from quote
+  const [deliveryLocation, setDeliveryLocation] = useState<string>(
+    quote.deliveryLocation || ""
+  );
+
+  const deliveryPrimarySplit = splitPhone(
+    initialDraft?.deliveryContactPrimaryPhoneNumber
+  );
+  const deliverySecondarySplit = splitPhone(
+    initialDraft?.deliveryContactSecondaryPhoneNumber
+  );
+
+  const [deliveryPrimaryPhone, setDeliveryPrimaryPhone] = useState<{
+    code: string;
+    number: string;
+  }>(deliveryPrimarySplit);
+
+  const [deliverySecondaryPhone, setDeliverySecondaryPhone] = useState<{
+    code: string;
+    number: string;
+  }>(deliverySecondarySplit);
 
   // Vehicle
-  const [vehicle, setVehicle] = useState(() => {
-    if (!quote?.vehicle) return "";
+  const [vehicle, setVehicle] = useState<string>(() => {
+    if (initialDraft?.vehicle) return initialDraft.vehicle;
+    if (!quote.vehicle) return "";
     return `${quote.vehicle.brand} ${quote.vehicle.model}`.trim();
   });
-  const [condition, setCondition] = useState("Runs & Drive");
 
-  // sync behavior when "same as primary" is checked
+  const [condition, setCondition] = useState<string>(
+    initialDraft?.condition || "Runs & Drive"
+  );
+
+  // keep locked locations synced if quote changes
+  useEffect(() => {
+    setPickupLocation(quote.pickupLocation || "");
+    setDeliveryLocation(quote.deliveryLocation || "");
+  }, [quote.pickupLocation, quote.deliveryLocation]);
+
+  // sync behavior for "same as primary contact"
   useEffect(() => {
     if (pickupSameAsPrimary) {
       if (deliveryContactName) setPickupContactName(deliveryContactName);
-      if (deliveryPrimaryPhone) setPickupPrimaryPhone(deliveryPrimaryPhone);
+      if (deliveryPrimaryPhone.number)
+        setPickupPrimaryPhone(deliveryPrimaryPhone);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickupSameAsPrimary]);
@@ -313,7 +495,8 @@ const OnlineReservationForm: React.FC = () => {
   useEffect(() => {
     if (deliverySameAsPrimary) {
       if (pickupContactName) setDeliveryContactName(pickupContactName);
-      if (pickupPrimaryPhone) setDeliveryPrimaryPhone(pickupPrimaryPhone);
+      if (pickupPrimaryPhone.number)
+        setDeliveryPrimaryPhone(pickupPrimaryPhone);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliverySameAsPrimary]);
@@ -328,16 +511,25 @@ const OnlineReservationForm: React.FC = () => {
       return;
     }
 
-    // REQUIRED fields only
+    const pickupPrimaryFull = `${pickupPrimaryPhone.code} ${pickupPrimaryPhone.number}`.trim();
+    const deliveryPrimaryFull = `${deliveryPrimaryPhone.code} ${deliveryPrimaryPhone.number}`.trim();
+
+    const pickupSecondaryFull = pickupSecondaryPhone.number
+      ? `${pickupSecondaryPhone.code} ${pickupSecondaryPhone.number}`.trim()
+      : undefined;
+
+    const deliverySecondaryFull = deliverySecondaryPhone.number
+      ? `${deliverySecondaryPhone.code} ${deliverySecondaryPhone.number}`.trim()
+      : undefined;
+
+    // Required fields only
     if (
       !pickupContactName ||
       !pickupAddress ||
-      !pickupLocation ||
-      !pickupPrimaryPhone ||
+      !pickupPrimaryPhone.number ||
       !deliveryContactName ||
       !deliveryAddress ||
-      !deliveryLocation ||
-      !deliveryPrimaryPhone
+      !deliveryPrimaryPhone.number
     ) {
       toast({
         title: "Missing fields",
@@ -348,36 +540,40 @@ const OnlineReservationForm: React.FC = () => {
       return;
     }
 
+    const reservationDraft: ReservationDraft = {
+      quoteReference: quote.quoteReference,
+
+      pickupAddress,
+      pickupLocation, // ✅ locked
+      pickupContactName,
+      pickupContactPrimaryPhoneNumber: pickupPrimaryFull,
+      pickupContactSecondaryPhoneNumber: pickupSecondaryFull,
+      pickUpResidenceType: pickupLocationType,
+
+      deliveryAddress,
+      deliveryLocation, // ✅ locked
+      deliveryContactName,
+      deliveryContactPrimaryPhoneNumber: deliveryPrimaryFull,
+      deliveryContactSecondaryPhoneNumber: deliverySecondaryFull,
+      deliveryResidentialType,
+
+      carrierType,
+      condition,
+      vehicle,
+      shipmentDate: shipmentDateFromQuote,
+    };
+
+    // persist draft for Edit backflow + refresh safety
+    sessionStorage.setItem("reservationDraft", JSON.stringify(reservationDraft));
+
     navigate("/payment-protection", {
       state: {
         quoteReference: quote.quoteReference,
-        reservationDraft: {
-          quoteReference: quote.quoteReference,
-          pickupAddress,
-          deliveryAddress,
-          pickupContactName,
-          pickupContactPrimaryPhoneNumber: pickupPrimaryPhone,
-          deliveryContactName,
-          deliveryContactPrimaryPhoneNumber: deliveryPrimaryPhone,
-          pickUpResidenceType: pickupLocationType,
-          deliveryResidentialType: deliveryResidentialType,
-
-          // extra fields
-          pickupLocation,
-          pickupContactSecondaryPhoneNumber: pickupSecondaryPhone || undefined,
-          deliveryLocation,
-          deliveryContactSecondaryPhoneNumber: deliverySecondaryPhone || undefined,
-
-          carrierType,
-          condition,
-          vehicle,
-          shipmentDate: shipmentDateFromQuote,
-        },
+        quote,
+        reservationDraft,
       },
     });
   };
-
-  if (!quote) return null;
 
   const carModelText = quote.vehicle
     ? `${quote.vehicle.brand} ${quote.vehicle.model} ${quote.vehicle.year}`
@@ -405,7 +601,9 @@ const OnlineReservationForm: React.FC = () => {
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                           s.isOn ? "text-white" : "bg-gray-300 text-gray-600"
                         }`}
-                        style={{ backgroundColor: s.isOn ? PRIMARY : undefined }}
+                        style={{
+                          backgroundColor: s.isOn ? PRIMARY : undefined,
+                        }}
                       >
                         {s.n}
                       </div>
@@ -565,19 +763,13 @@ const OnlineReservationForm: React.FC = () => {
                   <label className="block text-sm text-gray-600 mb-1">
                     Pickup Address
                   </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    {/* ✅ AUTOCOMPLETE */}
-                    <AutoCompleteInput
-                      value={pickupAddress}
-                      onChange={setPickupAddress}
-                      placeholder="Enter pickup address"
-                      inputAriaLabel="Pickup Address"
-                      leftIcon={
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      }
-                    />
-                  </div>
+                  {/* ✅ AUTOCOMPLETE */}
+                  <AddressAutocompleteInput
+                    value={pickupAddress}
+                    onChange={setPickupAddress}
+                    placeholder="Enter pickup address"
+                    ariaLabel="Pickup Address"
+                  />
                 </div>
 
                 <div>
@@ -585,15 +777,13 @@ const OnlineReservationForm: React.FC = () => {
                     Pickup Location
                   </label>
                   <div className="relative">
-                    {/* ✅ AUTOCOMPLETE */}
-                    <AutoCompleteInput
-                      value={pickupLocation}
-                      onChange={setPickupLocation}
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
                       placeholder="Enter pickup location"
-                      inputAriaLabel="Pickup Location"
-                      leftIcon={
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      }
+                      className="pl-10"
+                      value={pickupLocation}
+                      disabled
+                      readOnly
                     />
                   </div>
                 </div>
@@ -605,30 +795,24 @@ const OnlineReservationForm: React.FC = () => {
                   <label className="block text-sm text-gray-600 mb-1">
                     Primary Phone Number
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="e.g. 09012345678"
-                      className="pl-10"
-                      value={pickupPrimaryPhone}
-                      onChange={(e) => setPickupPrimaryPhone(e.target.value)}
-                    />
-                  </div>
+                  <PhoneWithCountry
+                    value={pickupPrimaryPhone}
+                    onChange={setPickupPrimaryPhone}
+                    options={countryCodes}
+                    placeholder="e.g. 09012345678"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
                     Secondary Phone Number (Optional)
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="e.g. 09012345678"
-                      className="pl-10"
-                      value={pickupSecondaryPhone}
-                      onChange={(e) => setPickupSecondaryPhone(e.target.value)}
-                    />
-                  </div>
+                  <PhoneWithCountry
+                    value={pickupSecondaryPhone}
+                    onChange={setPickupSecondaryPhone}
+                    options={countryCodes}
+                    placeholder="e.g. 09012345678"
+                  />
                 </div>
               </div>
             </div>
@@ -701,18 +885,13 @@ const OnlineReservationForm: React.FC = () => {
                   <label className="block text-sm text-gray-600 mb-1">
                     Delivery Address
                   </label>
-                  <div className="relative">
-                    {/* ✅ AUTOCOMPLETE */}
-                    <AutoCompleteInput
-                      value={deliveryAddress}
-                      onChange={setDeliveryAddress}
-                      placeholder="Enter delivery address"
-                      inputAriaLabel="Delivery Address"
-                      leftIcon={
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      }
-                    />
-                  </div>
+                  {/* ✅ AUTOCOMPLETE */}
+                  <AddressAutocompleteInput
+                    value={deliveryAddress}
+                    onChange={setDeliveryAddress}
+                    placeholder="Enter delivery address"
+                    ariaLabel="Delivery Address"
+                  />
                 </div>
 
                 <div>
@@ -720,15 +899,13 @@ const OnlineReservationForm: React.FC = () => {
                     Delivery Location
                   </label>
                   <div className="relative">
-                    {/* ✅ AUTOCOMPLETE */}
-                    <AutoCompleteInput
-                      value={deliveryLocation}
-                      onChange={setDeliveryLocation}
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
                       placeholder="Enter delivery location"
-                      inputAriaLabel="Delivery Location"
-                      leftIcon={
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      }
+                      className="pl-10"
+                      value={deliveryLocation}
+                      disabled
+                      readOnly
                     />
                   </div>
                 </div>
@@ -740,30 +917,24 @@ const OnlineReservationForm: React.FC = () => {
                   <label className="block text-sm text-gray-600 mb-1">
                     Primary Phone Number
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="e.g. 08123456789"
-                      className="pl-10"
-                      value={deliveryPrimaryPhone}
-                      onChange={(e) => setDeliveryPrimaryPhone(e.target.value)}
-                    />
-                  </div>
+                  <PhoneWithCountry
+                    value={deliveryPrimaryPhone}
+                    onChange={setDeliveryPrimaryPhone}
+                    options={countryCodes}
+                    placeholder="e.g. 08123456789"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
                     Secondary Phone Number (Optional)
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="e.g. 08123456789"
-                      className="pl-10"
-                      value={deliverySecondaryPhone}
-                      onChange={(e) => setDeliverySecondaryPhone(e.target.value)}
-                    />
-                  </div>
+                  <PhoneWithCountry
+                    value={deliverySecondaryPhone}
+                    onChange={setDeliverySecondaryPhone}
+                    options={countryCodes}
+                    placeholder="e.g. 08123456789"
+                  />
                 </div>
               </div>
             </div>
