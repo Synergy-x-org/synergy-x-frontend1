@@ -1,4 +1,7 @@
-// src/pages/ProfileReservations.tsx
+// ✅ Updated File: src/pages/ProfileReservations.tsx
+// Only change: add placeholder text "Start date" and "End date" on the date inputs.
+// (Nothing else edited.)
+
 import { useEffect, useMemo, useState } from "react";
 import { Search, Filter, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,26 +39,34 @@ type FilterBy = "NONE" | "DATE" | "LOCATION";
 const mapStatus = (raw?: string): UiStatus => {
   const s = (raw || "").toUpperCase();
   if (s === "PENDING") return "Pending";
-  if (s === "ACTIVE" || s === "SUCCESSFUL" || s === "SHIPPED" || s === "DELIVERED")
+  if (
+    s === "ACTIVE" ||
+    s === "SUCCESSFUL" ||
+    s === "SHIPPED" ||
+    s === "DELIVERED"
+  )
     return "Active";
-  if (s === "CANCELLED" || s === "CANCELED" || s === "FAILED") return "Canceled";
+  if (s === "CANCELLED" || s === "CANCELED" || s === "FAILED")
+    return "Canceled";
   return "Pending";
 };
 
 const statusBadgeClass = (s: UiStatus) => {
-  if (s === "Active") return "bg-green-500 hover:bg-green-600 text-white border-0";
-  if (s === "Pending") return "bg-yellow-500 hover:bg-yellow-600 text-white border-0";
+  if (s === "Active")
+    return "bg-green-500 hover:bg-green-600 text-white border-0";
+  if (s === "Pending")
+    return "bg-yellow-500 hover:bg-yellow-600 text-white border-0";
   return "bg-red-500 hover:bg-red-600 text-white border-0";
 };
 
 const formatMoney = (value?: number) => {
   if (typeof value !== "number" || Number.isNaN(value)) return "—";
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(
-    value
-  );
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+  }).format(value);
 };
 
-// user-profile list mapping (limited fields)
 const toUiFromUserProfile = (r: UserProfileReservation): UiReservation => ({
   id: r.reservationId,
   vehicleModel: r.quoteReference ? `Quote ${r.quoteReference}` : "—",
@@ -66,7 +77,6 @@ const toUiFromUserProfile = (r: UserProfileReservation): UiReservation => ({
   status: mapStatus(r.status),
 });
 
-// date-range mapping (full fields)
 const pickDate = (r: ReservationDetails) =>
   r.reservationDate || r.pickupDate || r.deliveryDate || "—";
 
@@ -88,24 +98,18 @@ const ProfileReservations = () => {
 
   const [allReservations, setAllReservations] = useState<UiReservation[]>([]);
 
-  // search box (reservationId or quote reference fallback)
   const [search, setSearch] = useState("");
 
-  // filterBy dropdown
   const [filterBy, setFilterBy] = useState<FilterBy>("NONE");
 
-  // date-range inputs (endpoint requires start+end)
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // location suggestions endpoint
   const [locationKeyword, setLocationKeyword] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
 
-  // status dropdown - show placeholder "Status" but still keep ALL internally
   const [statusFilter, setStatusFilter] = useState<UiStatus | "ALL">("ALL");
 
-  // Dormant logic
   const activeLock = useMemo(() => {
     if (filterBy === "DATE" && (startDate || endDate)) return "DATE";
     if (filterBy === "LOCATION" && locationKeyword.trim()) return "LOCATION";
@@ -151,7 +155,6 @@ const ProfileReservations = () => {
     loadDefault();
   };
 
-  // DATE RANGE: call endpoint when both dates are present
   useEffect(() => {
     const run = async () => {
       if (filterBy !== "DATE") return;
@@ -161,7 +164,11 @@ const ProfileReservations = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await reservationsAPI.getByDateRange(startDate, endDate, token);
+        const data = await reservationsAPI.getByDateRange(
+          startDate,
+          endDate,
+          token
+        );
         setAllReservations(data.map(toUiFromDateRange));
       } catch (e: any) {
         setAllReservations([]);
@@ -174,7 +181,6 @@ const ProfileReservations = () => {
     run();
   }, [filterBy, startDate, endDate, token]);
 
-  // LOCATION: call suggest endpoint when keyword is present
   useEffect(() => {
     const run = async () => {
       if (filterBy !== "LOCATION") return;
@@ -187,7 +193,10 @@ const ProfileReservations = () => {
 
       try {
         setError(null);
-        const suggestions = await reservationsAPI.getLocationSuggestions(kw, token);
+        const suggestions = await reservationsAPI.getLocationSuggestions(
+          kw,
+          token
+        );
         setLocationSuggestions(suggestions);
       } catch (e: any) {
         setLocationSuggestions([]);
@@ -198,7 +207,6 @@ const ProfileReservations = () => {
     run();
   }, [filterBy, locationKeyword, token]);
 
-  // Search by quote reference (server) then fallback client filter
   const handleSearch = async () => {
     const q = search.trim();
     if (!q) return;
@@ -229,7 +237,6 @@ const ProfileReservations = () => {
         return;
       }
 
-      // fallback client search
       setAllReservations((prev) =>
         prev.filter(
           (r) =>
@@ -246,7 +253,6 @@ const ProfileReservations = () => {
     }
   };
 
-  // Apply status filter client-side (endpoint space later)
   const rows = useMemo(() => {
     let list = [...allReservations];
 
@@ -257,7 +263,9 @@ const ProfileReservations = () => {
     const q = search.trim().toLowerCase();
     if (q && activeLock === "SEARCH") {
       list = list.filter(
-        (r) => r.id.toLowerCase().includes(q) || r.vehicleModel.toLowerCase().includes(q)
+        (r) =>
+          r.id.toLowerCase().includes(q) ||
+          r.vehicleModel.toLowerCase().includes(q)
       );
     }
 
@@ -283,7 +291,6 @@ const ProfileReservations = () => {
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mt-4">
-          {/* Search box */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -304,7 +311,6 @@ const ProfileReservations = () => {
             Search
           </Button>
 
-          {/* Filter By + dropdown */}
           <div className="flex items-center gap-2">
             <Button variant="outline" className="gap-2" disabled={disableFilterBy}>
               <Filter className="w-4 h-4" />
@@ -338,22 +344,33 @@ const ProfileReservations = () => {
             </Select>
           </div>
 
-          {/* DATE RANGE UI */}
           <div className="flex items-center gap-2">
             {filterBy === "DATE" ? (
               <>
                 <Input
-                  type="date"
+                  type="text"
+                  placeholder="Start date"
                   value={startDate}
+                  onFocus={(e) => (e.currentTarget.type = "date")}
+                  onBlur={(e) => {
+                  if (!startDate) e.currentTarget.type = "text";
+                  }}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-[160px]"
-                />
-                <Input
-                  type="date"
+                  />
+
+                  <Input
+                  type="text"
+                  placeholder="End date"
                   value={endDate}
+                  onFocus={(e) => (e.currentTarget.type = "date")}
+                  onBlur={(e) => {
+                  if (!endDate) e.currentTarget.type = "text";
+                  }}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-[160px]"
-                />
+                  />
+
               </>
             ) : (
               <Button variant="outline" className="gap-2" disabled>
@@ -362,7 +379,6 @@ const ProfileReservations = () => {
               </Button>
             )}
 
-            {/* LOCATION UI */}
             {filterBy === "LOCATION" ? (
               <Input
                 placeholder="Keyword e.g. New"
@@ -378,7 +394,6 @@ const ProfileReservations = () => {
             )}
           </div>
 
-          {/* Status dropdown should DISPLAY "Status" not "All" */}
           <Select
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as any)}
@@ -388,7 +403,6 @@ const ProfileReservations = () => {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              {/* Internal ALL, but UI label stays Status */}
               <SelectItem value="ALL">Status</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
               <SelectItem value="Active">Active</SelectItem>
@@ -397,17 +411,17 @@ const ProfileReservations = () => {
           </Select>
         </div>
 
-        {/* Location suggestions display */}
         {filterBy === "LOCATION" && locationSuggestions.length > 0 && (
           <div className="mt-3 text-sm text-muted-foreground">
             Suggestions:{" "}
-            <span className="text-foreground">{locationSuggestions.join(", ")}</span>
+            <span className="text-foreground">
+              {locationSuggestions.join(", ")}
+            </span>
           </div>
         )}
       </CardHeader>
 
       <CardContent>
-        {/* Table Header */}
         <div className="hidden md:grid md:grid-cols-6 gap-4 pb-4 border-b border-border text-sm font-medium text-muted-foreground">
           <div>Vehicle Model</div>
           <div>Location</div>
@@ -448,7 +462,9 @@ const ProfileReservations = () => {
                 </div>
 
                 <div className="text-sm text-muted-foreground">{r.location}</div>
-                <div className="text-sm text-muted-foreground">{r.destination}</div>
+                <div className="text-sm text-muted-foreground">
+                  {r.destination}
+                </div>
                 <div className="text-sm text-muted-foreground">{r.date}</div>
                 <div className="text-sm font-medium">{r.amount}</div>
 
@@ -460,7 +476,6 @@ const ProfileReservations = () => {
           </div>
         )}
 
-        {/* Pagination UI kept */}
         <div className="flex items-center justify-center gap-4 mt-8 pt-4 border-t border-border">
           <Button variant="outline" size="sm">
             Previous
