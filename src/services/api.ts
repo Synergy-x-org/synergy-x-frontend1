@@ -372,24 +372,73 @@ export const quotesAPI = {
 },
 };
 
+// export const contactAPI = {
+//   getInTouch: async (data: GetInTouchData) => {
+//     const response = await fetch(`${BASE_URL}/contact/send-message`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify(data),
+//     });
+
+//     const responseData = await response.json();
+
+//     if (response.ok) {
+//       return responseData;
+//     } else {
+//       throw new Error(
+//         responseData.message || responseData.error || "Failed to send message"
+//       );
+//     }
+//   },
+// };
+
+export interface ContactResponse {
+  status: "SUCCESS" | "FAILED" | string;
+  message: string;
+  data?: {
+    customerEmail: string;
+    submissionId: string;
+    estimatedResponseHours: string;
+  };
+  timestamp?: string;
+}
+
 export const contactAPI = {
-  getInTouch: async (data: GetInTouchData) => {
+  getInTouch: async (data: GetInTouchData): Promise<ContactResponse> => {
     const response = await fetch(`${BASE_URL}/contact/send-message`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify(data),
     });
 
-    const responseData = await response.json();
+    // ✅ Read as text first (prevents JSON parse crashes)
+    const responseText = await response.text();
+
+    // ✅ Try parse JSON; fallback safely
+    let responseData: any = null;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { message: responseText };
+    }
 
     if (response.ok) {
-      return responseData;
-    } else {
-      throw new Error(
-        responseData.message || responseData.error || "Failed to send message"
-      );
+      // ✅ Return the full backend response exactly
+      return responseData as ContactResponse;
     }
+
+    // ✅ Consistent error message extraction
+    const errorMessage =
+      responseData?.message ||
+      responseData?.error ||
+      responseText ||
+      "Failed to send message";
+
+    throw new Error(String(errorMessage).trim());
   },
 };
