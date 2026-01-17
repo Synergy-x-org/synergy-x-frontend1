@@ -284,7 +284,7 @@ const OnlineReservationForm: React.FC = () => {
   const mode = (location.state as any)?.mode as "edit" | undefined;
   const isEditMode = mode === "edit";
 
-  // ✅ FIX: if NOT edit mode, wipe any previous draft so new users don't inherit it
+  // ✅ IMPORTANT: new user should not inherit old draft
   useEffect(() => {
     if (!isEditMode) {
       sessionStorage.removeItem("reservationDraft");
@@ -317,7 +317,6 @@ const OnlineReservationForm: React.FC = () => {
     }
   }, []);
 
-  // ✅ FIX: only hydrate draft when editing from PaymentProtection
   const initialDraft = isEditMode ? (draftFromNav || draftFromStorage) : null;
 
   const [countryCodes, setCountryCodes] = useState<CountryCodeOption[]>([
@@ -371,6 +370,7 @@ const OnlineReservationForm: React.FC = () => {
     (initialDraft?.carrierType as any) || "open"
   );
 
+  // Pickup
   const [pickupSameAsPrimary, setPickupSameAsPrimary] = useState(false);
   const [pickupLocationType, setPickupLocationType] = useState<
     "RESIDENTIAL" | "BUSINESS"
@@ -405,6 +405,7 @@ const OnlineReservationForm: React.FC = () => {
     number: string;
   }>(pickupSecondarySplit);
 
+  // Delivery
   const [deliverySameAsPrimary, setDeliverySameAsPrimary] = useState(false);
   const [deliveryResidentialType, setDeliveryResidentialType] = useState<
     "RESIDENTIAL" | "BUSINESS"
@@ -439,7 +440,9 @@ const OnlineReservationForm: React.FC = () => {
     number: string;
   }>(deliverySecondarySplit);
 
-  const [vehicle, setVehicle] = useState<string>(() => {
+  // Vehicle
+  const [vehicle] = useState<string>(() => {
+    // read-only field
     if (initialDraft?.vehicle) return initialDraft.vehicle;
     if (!quote.vehicle) return "";
     return `${quote.vehicle.brand} ${quote.vehicle.model}`.trim();
@@ -449,6 +452,7 @@ const OnlineReservationForm: React.FC = () => {
     initialDraft?.condition || "Runs & Drive"
   );
 
+  // keep locked locations synced when NOT edit mode
   useEffect(() => {
     if (!isEditMode) {
       setPickupLocation(quote.pickupLocation || "");
@@ -456,11 +460,11 @@ const OnlineReservationForm: React.FC = () => {
     }
   }, [isEditMode, quote.pickupLocation, quote.deliveryLocation]);
 
+  // same-as sync
   useEffect(() => {
     if (pickupSameAsPrimary) {
       if (deliveryContactName) setPickupContactName(deliveryContactName);
-      if (deliveryPrimaryPhone.number)
-        setPickupPrimaryPhone(deliveryPrimaryPhone);
+      if (deliveryPrimaryPhone.number) setPickupPrimaryPhone(deliveryPrimaryPhone);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickupSameAsPrimary]);
@@ -468,8 +472,7 @@ const OnlineReservationForm: React.FC = () => {
   useEffect(() => {
     if (deliverySameAsPrimary) {
       if (pickupContactName) setDeliveryContactName(pickupContactName);
-      if (pickupPrimaryPhone.number)
-        setDeliveryPrimaryPhone(pickupPrimaryPhone);
+      if (pickupPrimaryPhone.number) setDeliveryPrimaryPhone(pickupPrimaryPhone);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliverySameAsPrimary]);
@@ -484,10 +487,8 @@ const OnlineReservationForm: React.FC = () => {
       return;
     }
 
-    const pickupPrimaryFull =
-      `${pickupPrimaryPhone.code} ${pickupPrimaryPhone.number}`.trim();
-    const deliveryPrimaryFull =
-      `${deliveryPrimaryPhone.code} ${deliveryPrimaryPhone.number}`.trim();
+    const pickupPrimaryFull = `${pickupPrimaryPhone.code} ${pickupPrimaryPhone.number}`.trim();
+    const deliveryPrimaryFull = `${deliveryPrimaryPhone.code} ${deliveryPrimaryPhone.number}`.trim();
 
     const pickupSecondaryFull = pickupSecondaryPhone.number
       ? `${pickupSecondaryPhone.code} ${pickupSecondaryPhone.number}`.trim()
@@ -540,7 +541,6 @@ const OnlineReservationForm: React.FC = () => {
       shipmentDate: shipmentDateFromQuote,
     };
 
-    // ✅ Store draft only to support edit flow (PaymentProtection -> Edit)
     sessionStorage.setItem("reservationDraft", JSON.stringify(reservationDraft));
 
     navigate("/payment-protection", {
@@ -656,9 +656,7 @@ const OnlineReservationForm: React.FC = () => {
                   </label>
                   <Select
                     value={carrierType}
-                    onValueChange={(v) =>
-                      setCarrierType(v as "open" | "enclosed")
-                    }
+                    onValueChange={(v) => setCarrierType(v as "open" | "enclosed")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Open Carrier" />
@@ -685,9 +683,7 @@ const OnlineReservationForm: React.FC = () => {
                 <Checkbox
                   id="pickupSame"
                   checked={pickupSameAsPrimary}
-                  onCheckedChange={(checked) =>
-                    setPickupSameAsPrimary(checked as boolean)
-                  }
+                  onCheckedChange={(checked) => setPickupSameAsPrimary(checked as boolean)}
                 />
                 <label htmlFor="pickupSame" className="text-sm text-gray-600">
                   Pickup contact same as primary contact
@@ -702,9 +698,7 @@ const OnlineReservationForm: React.FC = () => {
                   </label>
                   <Select
                     value={pickupLocationType}
-                    onValueChange={(v) =>
-                      setPickupLocationType(v as "RESIDENTIAL" | "BUSINESS")
-                    }
+                    onValueChange={(v) => setPickupLocationType(v as "RESIDENTIAL" | "BUSINESS")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Residence" />
@@ -750,17 +744,27 @@ const OnlineReservationForm: React.FC = () => {
                   <label className="block text-sm text-gray-600 mb-1">
                     Pickup Location
                   </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="Enter pickup location"
-                      className="pl-10"
+
+                  {/* ✅ FIX: when editing, use autocomplete for location too */}
+                  {isEditMode ? (
+                    <AddressAutocompleteInput
                       value={pickupLocation}
-                      onChange={(e) => setPickupLocation(e.target.value)}
-                      disabled={!isEditMode}
-                      readOnly={!isEditMode}
+                      onChange={setPickupLocation}
+                      placeholder="Enter pickup location"
+                      ariaLabel="Pickup Location"
                     />
-                  </div>
+                  ) : (
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        placeholder="Enter pickup location"
+                        className="pl-10"
+                        value={pickupLocation}
+                        disabled
+                        readOnly
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -774,19 +778,19 @@ const OnlineReservationForm: React.FC = () => {
                     value={pickupPrimaryPhone}
                     onChange={setPickupPrimaryPhone}
                     options={countryCodes}
-                    placeholder="e.g. 12345678"
+                    placeholder="e.g. 09012345678"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
-                    Secondary Phone Number
+                    Secondary Phone Number (Optional)
                   </label>
                   <PhoneWithCountry
                     value={pickupSecondaryPhone}
                     onChange={setPickupSecondaryPhone}
                     options={countryCodes}
-                    placeholder="e.g. 12345678"
+                    placeholder="e.g. 09012345678"
                   />
                 </div>
               </div>
@@ -805,9 +809,7 @@ const OnlineReservationForm: React.FC = () => {
                 <Checkbox
                   id="deliverySame"
                   checked={deliverySameAsPrimary}
-                  onCheckedChange={(checked) =>
-                    setDeliverySameAsPrimary(checked as boolean)
-                  }
+                  onCheckedChange={(checked) => setDeliverySameAsPrimary(checked as boolean)}
                 />
                 <label htmlFor="deliverySame" className="text-sm text-gray-600">
                   Delivery contact same as primary contact
@@ -823,9 +825,7 @@ const OnlineReservationForm: React.FC = () => {
                   <Select
                     value={deliveryResidentialType}
                     onValueChange={(v) =>
-                      setDeliveryResidentialType(
-                        v as "RESIDENTIAL" | "BUSINESS"
-                      )
+                      setDeliveryResidentialType(v as "RESIDENTIAL" | "BUSINESS")
                     }
                   >
                     <SelectTrigger>
@@ -845,7 +845,7 @@ const OnlineReservationForm: React.FC = () => {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
-                      placeholder="Enter full name"
+                      placeholder="Enter your full name"
                       className="pl-10"
                       value={deliveryContactName}
                       onChange={(e) => setDeliveryContactName(e.target.value)}
@@ -872,17 +872,27 @@ const OnlineReservationForm: React.FC = () => {
                   <label className="block text-sm text-gray-600 mb-1">
                     Delivery Location
                   </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="Enter delivery location"
-                      className="pl-10"
+
+                  {/* ✅ FIX: when editing, use autocomplete for location too */}
+                  {isEditMode ? (
+                    <AddressAutocompleteInput
                       value={deliveryLocation}
-                      onChange={(e) => setDeliveryLocation(e.target.value)}
-                      disabled={!isEditMode}
-                      readOnly={!isEditMode}
+                      onChange={setDeliveryLocation}
+                      placeholder="Enter delivery location"
+                      ariaLabel="Delivery Location"
                     />
-                  </div>
+                  ) : (
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        placeholder="Enter delivery location"
+                        className="pl-10"
+                        value={deliveryLocation}
+                        disabled
+                        readOnly
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -902,13 +912,13 @@ const OnlineReservationForm: React.FC = () => {
 
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
-                    Secondary Phone Number
+                    Secondary Phone Number (Optional)
                   </label>
                   <PhoneWithCountry
                     value={deliverySecondaryPhone}
                     onChange={setDeliverySecondaryPhone}
                     options={countryCodes}
-                    placeholder="e.g. 0123456789"
+                    placeholder="e.g. 08123456789"
                   />
                 </div>
               </div>
@@ -916,26 +926,26 @@ const OnlineReservationForm: React.FC = () => {
 
             {/* Vehicle Details */}
             <div
-  className="text-white px-4 py-3 rounded-t-lg"
-  style={{ backgroundColor: PRIMARY }}
->
-  <span className="font-medium">Vehicle Details</span>
-</div>
+              className="text-white px-4 py-3 rounded-t-lg"
+              style={{ backgroundColor: PRIMARY }}
+            >
+              <span className="font-medium">Vehicle Details</span>
+            </div>
 
-<div className="border border-t-0 rounded-b-lg p-4 mb-6">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-      <label className="block text-sm text-gray-600 mb-1">
-        Vehicle
-      </label>
-      <Input
-        placeholder="Vehicle name"
-        value={vehicle}
-        readOnly
-        disabled
-        className="bg-gray-100 cursor-not-allowed"
-      />
-    </div>
+            <div className="border border-t-0 rounded-b-lg p-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    Vehicle
+                  </label>
+                  <Input
+                    placeholder="Vehicle name"
+                    value={vehicle}
+                    readOnly
+                    disabled
+                    className="bg-gray-100 cursor-not-allowed"
+                  />
+                </div>
 
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
@@ -947,7 +957,7 @@ const OnlineReservationForm: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Runs & Drive">Runs & Drive</SelectItem>
-                      {/* <SelectItem value="Non-Running">Non-Running</SelectItem> */}
+                      <SelectItem value="Non-Running">Non-Running</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
