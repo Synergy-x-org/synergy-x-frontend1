@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { User, MapPin, Phone } from "lucide-react";
 import { getAutocomplete } from "@/services/mapService";
+import { reservationsAPI } from "@/services/reservationsAPI";
 
 const PRIMARY = "#E85C2B";
 
@@ -84,12 +85,16 @@ const buildCountryCodes = (data: any[]): CountryCodeOption[] => {
   return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
 };
 
-const splitPhone = (full: string | undefined): { code: string; number: string } => {
+const splitPhone = (
+  full: string | undefined
+): { code: string; number: string } => {
   const v = (full || "").trim();
   const match = v.match(/^(\+\d{1,4})\s*(.*)$/);
   if (match) return { code: match[1], number: (match[2] || "").trim() };
   return { code: "+1", number: v };
 };
+
+
 
 const PhoneWithCountry: React.FC<{
   value: { code: string; number: string };
@@ -100,7 +105,10 @@ const PhoneWithCountry: React.FC<{
   return (
     <div className="flex gap-2">
       <div className="w-[140px]">
-        <Select value={value.code} onValueChange={(v) => onChange({ ...value, code: v })}>
+        <Select
+          value={value.code}
+          onValueChange={(v) => onChange({ ...value, code: v })}
+        >
           <SelectTrigger>
             <SelectValue placeholder="+1" />
           </SelectTrigger>
@@ -129,7 +137,8 @@ const PhoneWithCountry: React.FC<{
 
 const normalizeAutocomplete = (data: any): string[] => {
   if (!data) return [];
-  if (Array.isArray(data) && data.every((x) => typeof x === "string")) return data;
+  if (Array.isArray(data) && data.every((x) => typeof x === "string"))
+    return data;
 
   if (Array.isArray(data?.predictions)) {
     return data.predictions
@@ -284,7 +293,6 @@ const OnlineReservationForm: React.FC = () => {
   const mode = (location.state as any)?.mode as "edit" | undefined;
   const isEditMode = mode === "edit";
 
-  // ✅ IMPORTANT: new user should not inherit old draft
   useEffect(() => {
     if (!isEditMode) {
       sessionStorage.removeItem("reservationDraft");
@@ -327,7 +335,9 @@ const OnlineReservationForm: React.FC = () => {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch("https://restcountries.com/v3.1/all?fields=name,idd");
+        const res = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,idd"
+        );
         const json = await res.json();
         const options = buildCountryCodes(json);
 
@@ -442,7 +452,6 @@ const OnlineReservationForm: React.FC = () => {
 
   // Vehicle
   const [vehicle] = useState<string>(() => {
-    // read-only field
     if (initialDraft?.vehicle) return initialDraft.vehicle;
     if (!quote.vehicle) return "";
     return `${quote.vehicle.brand} ${quote.vehicle.model}`.trim();
@@ -452,7 +461,6 @@ const OnlineReservationForm: React.FC = () => {
     initialDraft?.condition || "Runs & Drive"
   );
 
-  // keep locked locations synced when NOT edit mode
   useEffect(() => {
     if (!isEditMode) {
       setPickupLocation(quote.pickupLocation || "");
@@ -460,7 +468,6 @@ const OnlineReservationForm: React.FC = () => {
     }
   }, [isEditMode, quote.pickupLocation, quote.deliveryLocation]);
 
-  // same-as sync
   useEffect(() => {
     if (pickupSameAsPrimary) {
       if (deliveryContactName) setPickupContactName(deliveryContactName);
@@ -477,7 +484,7 @@ const OnlineReservationForm: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliverySameAsPrimary]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!quote?.quoteReference) {
       toast({
         title: "Error",
@@ -543,13 +550,55 @@ const OnlineReservationForm: React.FC = () => {
 
     sessionStorage.setItem("reservationDraft", JSON.stringify(reservationDraft));
 
-    navigate("/payment-protection", {
-      state: {
-        quoteReference: quote.quoteReference,
-        quote,
-        reservationDraft,
-      },
-    });
+    // ✅ IMPORTANT FIX:
+    // Backend sample expects digits-only phone numbers (e.g. 09012345678) not "+234 090..."
+    // We do NOT change UI or stored draft display; only the payload to /secure.
+    const digitsOnly = (s: string) => (s || "").replace(/\D/g, "");
+
+    const pickupPhoneDigits = digitsOnly(pickupPrimaryPhone.number);
+    const deliveryPhoneDigits = digitsOnly(deliveryPrimaryPhone.number);
+
+    try {
+      const secured = await reservationsAPI.secureReservation({
+        quoteReference: reservationDraft.quoteReference,
+        pickupAddress: reservationDraft.pickupAddress,
+        deliveryAddress: reservationDraft.deliveryAddress,
+        pickupContactName: reservationDraft.pickupContactName,
+        pickupContactPrimaryPhoneNumber: pickupPhoneDigits,
+        deliveryContactName: reservationDraft.deliveryContactName,
+        deliveryContactPrimaryPhoneNumber: deliveryPhoneDigits,
+        pickUpResidenceType: reservationDraft.pickUpResidenceType,
+        deliveryResidentialType: reservationDraft.deliveryResidentialType,
+      });
+
+      const quoteForPayment: QuoteLike = {
+        ...quote,
+        price: typeof secured?.price === "number" ? secured.price : quote.price,
+        downPayment:
+          typeof secured?.downPayment === "number" ? secured.downPayment : quote.downPayment,
+        balanceOnDelivery:
+          typeof secured?.balanceOnDelivery === "number"
+            ? secured.balanceOnDelivery
+            : quote.balanceOnDelivery,
+        deliveryDate: secured?.deliveryDate ?? quote.deliveryDate,
+        pickupDate: secured?.pickupDate ?? quote.pickupDate,
+      };
+
+      navigate("/payment-protection", {
+        state: {
+          quoteReference: quote.quoteReference,
+          quote: quoteForPayment,
+          reservationDraft,
+        },
+      });
+    } catch (err: any) {
+      toast({
+        title: "Reservation failed",
+        description: err?.message || "Failed to secure reservation. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
   };
 
   const carModelText = quote.vehicle
@@ -562,7 +611,6 @@ const OnlineReservationForm: React.FC = () => {
 
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4">
-          {/* Stepper */}
           <div className="mb-8 pt-24">
             <div className="flex items-center justify-center">
               <div className="flex items-center w-full max-w-4xl justify-between">
@@ -601,7 +649,6 @@ const OnlineReservationForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Main Form Card */}
           <div className="mx-auto w-full max-w-4xl bg-white rounded-2xl shadow-sm px-4 sm:px-6 md:px-8 py-6">
             <h1 className="text-2xl font-semibold text-center mb-2">
               Online Shipment Reservation
@@ -610,7 +657,6 @@ const OnlineReservationForm: React.FC = () => {
               Complete the secured online reservation form to book your shipment
             </p>
 
-            {/* Quote Section */}
             <div
               className="text-white px-4 py-3 rounded-t-lg"
               style={{ backgroundColor: PRIMARY }}
@@ -635,7 +681,6 @@ const OnlineReservationForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Shipment Details */}
             <div
               className="text-white px-4 py-3 rounded-t-lg"
               style={{ backgroundColor: PRIMARY }}
@@ -670,7 +715,6 @@ const OnlineReservationForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Pickup Location */}
             <div
               className="text-white px-4 py-3 rounded-t-lg"
               style={{ backgroundColor: PRIMARY }}
@@ -690,7 +734,6 @@ const OnlineReservationForm: React.FC = () => {
                 </label>
               </div>
 
-              {/* Row 1 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
@@ -726,7 +769,6 @@ const OnlineReservationForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 2 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
@@ -745,7 +787,6 @@ const OnlineReservationForm: React.FC = () => {
                     Pickup Location
                   </label>
 
-                  {/* ✅ FIX: when editing, use autocomplete for location too */}
                   {isEditMode ? (
                     <AddressAutocompleteInput
                       value={pickupLocation}
@@ -768,7 +809,6 @@ const OnlineReservationForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 3 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
@@ -796,7 +836,6 @@ const OnlineReservationForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Delivery Location */}
             <div
               className="text-white px-4 py-3 rounded-t-lg"
               style={{ backgroundColor: PRIMARY }}
@@ -816,7 +855,6 @@ const OnlineReservationForm: React.FC = () => {
                 </label>
               </div>
 
-              {/* Row 1 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
@@ -854,7 +892,6 @@ const OnlineReservationForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 2 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
@@ -873,7 +910,6 @@ const OnlineReservationForm: React.FC = () => {
                     Delivery Location
                   </label>
 
-                  {/* ✅ FIX: when editing, use autocomplete for location too */}
                   {isEditMode ? (
                     <AddressAutocompleteInput
                       value={deliveryLocation}
@@ -896,7 +932,6 @@ const OnlineReservationForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 3 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">
@@ -924,7 +959,6 @@ const OnlineReservationForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Vehicle Details */}
             <div
               className="text-white px-4 py-3 rounded-t-lg"
               style={{ backgroundColor: PRIMARY }}

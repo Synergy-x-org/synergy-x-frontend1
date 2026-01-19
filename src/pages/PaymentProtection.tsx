@@ -1,3 +1,8 @@
+// PaymentProtection.tsx
+// ✅ NO UI CHANGES. This already uses quote.price as the base shippingRate.
+// Since OnlineReservationForm now overwrites quote.price with secureReservation.price,
+// PaymentProtection will automatically show the secure price for Coverage Amount and Coverage Cost.
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -103,6 +108,8 @@ const PaymentProtection: React.FC = () => {
       ? `${quote.vehicle.brand} ${quote.vehicle.model} ${quote.vehicle.year}`
       : reservationDraft?.vehicle || "N/A";
 
+  // ✅ This is where your base amount comes from.
+  // OnlineReservationForm now sets quote.price = secureReservation.price before navigating here.
   const shippingRate = typeof quote?.price === "number" ? quote.price : undefined;
 
   const [coverageAmount, setCoverageAmount] = useState<
