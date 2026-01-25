@@ -1,10 +1,16 @@
-import { useState } from "react";
-import { Search, Bell, ChevronDown, ChevronRight, LogOut, Settings, HelpCircle, MessageSquare, Users, Calendar, Truck, Package, LayoutDashboard } from "lucide-react";
+// AdminDashboard.tsx
+import { useEffect, useMemo, useState } from "react";
+import {
+  Search, Bell, ChevronDown, ChevronRight, LogOut, Settings, HelpCircle,
+  MessageSquare, Users, Calendar, Truck, Package, LayoutDashboard
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import logo from "@/assets/logo.png";
+import { adminAPI, AdminReservation, AdminMetrics } from "@/services/adminApi";
+import { useAuth } from "@/contexts/AuthContext";
 
 const chartData = [
   { name: "Jan", value: 20 },
@@ -21,41 +27,54 @@ const chartData = [
   { name: "Dec", value: 65 },
 ];
 
-const reservations = [
-  {
-    id: 1,
-    vehicleModel: "BMW Road Cars",
-    vehicleImage: "🚗",
-    location: "Montana, USA",
-    destination: "Washington, USA",
-    date: "15/08/2017",
-    amount: "$ 1,451.76",
-    status: "Active",
-  },
-  {
-    id: 2,
-    vehicleModel: "Volkswagen",
-    vehicleImage: "🚙",
-    location: "Minnesota, USA",
-    destination: "Michigan, USA",
-    date: "18/09/2016",
-    amount: "$ 1,505.33",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    vehicleModel: "Land Rover",
-    vehicleImage: "🚕",
-    location: "New Mexico, USA",
-    destination: "Brazil, USA",
-    date: "15/08/2017",
-    amount: "$ 1,764.46",
-    status: "Rejected",
-  },
-];
-
 const AdminDashboard = () => {
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["Dashboard"]);
+
+  const { token } = useAuth() as any; // adjust if your context shape differs
+
+  const [metrics, setMetrics] = useState<AdminMetrics>({
+    totalUsers: 0,
+    totalReservations: 0,
+    successfulShipments: 0,
+  });
+
+  const [reservations, setReservations] = useState<AdminReservation[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+
+        const [m, r] = await Promise.all([
+          adminAPI.getMetrics(token),
+          adminAPI.getReservations(token),
+        ]);
+
+        if (cancelled) return;
+
+        setMetrics({
+          totalUsers: m?.totalUsers ?? 0,
+          totalReservations: m?.totalReservations ?? 0,
+          successfulShipments: m?.successfulShipments ?? 0,
+        });
+
+        setReservations(r || []);
+      } catch (e) {
+        // keep UI exactly the same; you can toast if you want
+        // but not required for your request
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   const toggleMenu = (menu: string) => {
     setExpandedMenus((prev) =>
@@ -73,28 +92,36 @@ const AdminDashboard = () => {
   ];
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-500";
-      case "Pending":
-        return "bg-yellow-500";
-      case "Rejected":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
-    }
+    const s = String(status || "").toUpperCase();
+    if (s === "ACTIVE") return "bg-green-500";
+    if (s === "PENDING") return "bg-yellow-500";
+    if (s === "REJECTED") return "bg-red-500";
+    if (s === "SUCCESSFUL") return "bg-green-500";
+    return "bg-gray-500";
   };
+
+  const tableRows = useMemo(() => {
+    // Keep your table look; just map backend fields into the same columns
+    return reservations.map((r, idx) => ({
+      id: r.reservationId || String(idx),
+      vehicleModel: r.vehicle || "-",
+      vehicleImage: "🚗", // keep same look
+      location: r.pickupAddress || "-",
+      destination: r.deliveryAddress || "-",
+      date: r.reservationDate || "-",
+      amount: typeof r.price === "number" ? `$ ${r.price.toLocaleString()}` : "-",
+      status: r.status || "-",
+    }));
+  }, [reservations]);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        {/* Logo */}
         <div className="p-4 border-b border-gray-100">
           <img src={logo} alt="Synergy X" className="h-12" />
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-4">
           <ul className="space-y-1">
             {menuItems.map((item) => (
@@ -124,7 +151,6 @@ const AdminDashboard = () => {
           </ul>
         </nav>
 
-        {/* Bottom Section */}
         <div className="p-4 border-t border-gray-100">
           <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
             <Settings className="w-5 h-5" />
@@ -138,7 +164,6 @@ const AdminDashboard = () => {
             <ChevronDown className="w-4 h-4" />
           </button>
 
-          {/* User Profile */}
           <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
@@ -162,7 +187,6 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        {/* Header */}
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -186,9 +210,7 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* Content */}
         <div className="flex-1 p-6 overflow-auto">
-          {/* Welcome Section */}
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-semibold text-gray-900">Welcome David</h1>
             <Card className="bg-white border border-gray-200">
@@ -204,15 +226,16 @@ const AdminDashboard = () => {
             </Card>
           </div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards (REAL DATA) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {/* Total User */}
             <Card className="bg-white border border-gray-200">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Total User</p>
-                    <p className="text-2xl font-bold text-gray-900">1,902</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {metrics.totalUsers.toLocaleString()}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                     <Users className="w-6 h-6 text-red-500" />
@@ -225,13 +248,14 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Total Reservation */}
             <Card className="bg-white border border-gray-200">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Total Reservation</p>
-                    <p className="text-2xl font-bold text-gray-900">1,190</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {metrics.totalReservations.toLocaleString()}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                     <Calendar className="w-6 h-6 text-primary" />
@@ -244,7 +268,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Total Revenue */}
+            {/* keeping “Total Revenue” card as-is (no backend endpoint provided) */}
             <Card className="bg-white border border-gray-200">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
@@ -263,13 +287,14 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Successful shipment */}
             <Card className="bg-white border border-gray-200">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Successful shipment</p>
-                    <p className="text-2xl font-bold text-gray-900">1,190</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {metrics.successfulShipments.toLocaleString()}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                     <Package className="w-6 h-6 text-purple-500" />
@@ -283,7 +308,7 @@ const AdminDashboard = () => {
             </Card>
           </div>
 
-          {/* Shipment Details Chart */}
+          {/* Shipment Details Chart (unchanged) */}
           <Card className="bg-white border border-gray-200 mb-6">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -333,7 +358,7 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Reservation Details Table */}
+          {/* Reservation Details Table (REAL DATA) */}
           <Card className="bg-white border border-gray-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -343,6 +368,7 @@ const AdminDashboard = () => {
                   <ChevronDown className="w-4 h-4" />
                 </button>
               </div>
+
               <Table>
                 <TableHeader>
                   <TableRow className="border-b border-gray-100">
@@ -354,32 +380,32 @@ const AdminDashboard = () => {
                     <TableHead className="text-gray-500 font-medium">Status</TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
-                  {reservations.map((reservation) => (
-                    <TableRow key={reservation.id} className="border-b border-gray-50">
+                  {tableRows.map((row) => (
+                    <TableRow key={row.id} className="border-b border-gray-50">
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-lg">
-                            {reservation.vehicleImage}
+                            {row.vehicleImage}
                           </div>
-                          <span className="text-gray-900">{reservation.vehicleModel}</span>
+                          <span className="text-gray-900">{row.vehicleModel}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-gray-600">{reservation.location}</TableCell>
-                      <TableCell className="text-gray-600">{reservation.destination}</TableCell>
-                      <TableCell className="text-gray-600">{reservation.date}</TableCell>
-                      <TableCell className="text-gray-900 font-medium">{reservation.amount}</TableCell>
+                      <TableCell className="text-gray-600">{row.location}</TableCell>
+                      <TableCell className="text-gray-600">{row.destination}</TableCell>
+                      <TableCell className="text-gray-600">{row.date}</TableCell>
+                      <TableCell className="text-gray-900 font-medium">{row.amount}</TableCell>
                       <TableCell>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs text-white ${getStatusColor(
-                            reservation.status
-                          )}`}
-                        >
-                          {reservation.status}
+                        <span className={`px-3 py-1 rounded-full text-xs text-white ${getStatusColor(row.status)}`}>
+                          {String(row.status || "").charAt(0).toUpperCase() + String(row.status || "").slice(1).toLowerCase()}
                         </span>
                       </TableCell>
                     </TableRow>
                   ))}
+
+                  {/* Optional: keep look, but show nothing extra when loading */}
+                  {loading && tableRows.length === 0 ? null : null}
                 </TableBody>
               </Table>
             </CardContent>

@@ -27,6 +27,7 @@ import QuoteResultStepTwo from "./pages/QuoteResultStepTwo";
 import OnlineReservationForm from "./pages/OnlineReservationForm";
 import PaymentProtection from "./pages/PaymentProtection";
 import ProfileReservation from "./pages/ProfileReservations";
+import AdminDashboard from "./pages/AdminDashboard";
 
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -43,6 +44,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
