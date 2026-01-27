@@ -28,6 +28,8 @@ import OnlineReservationForm from "./pages/OnlineReservationForm";
 import PaymentProtection from "./pages/PaymentProtection";
 import ProfileReservation from "./pages/ProfileReservations";
 import AdminDashboard from "./pages/AdminDashboard";
+import PaymentSuccessful from "./pages/PaymentSuccessful";
+import PaymentDeclined from "./pages/PaymentDeclined";
 
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -68,6 +70,10 @@ const App = () => (
             <Route path="/online-reservation" element={<OnlineReservationForm />} />
             <Route path="/payment-protection" element={<PaymentProtection />} />
             <Route path="/profile/reservations" element={<ProfileReservation />} />
+
+            <Route path="/payment-successful" element={<PaymentSuccessful />} />
+            <Route path="/payment-declined" element={<PaymentDeclined />} />
+
 
 
 
