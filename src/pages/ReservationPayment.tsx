@@ -433,13 +433,13 @@ const ReservationPayment: React.FC = () => {
                     style={{ backgroundColor: PRIMARY }}
                   >
                     <span>Quote #{quoteReference}</span>
-                    <button
+                    {/* <button
                       type="button"
                       onClick={handleEdit}
                       className="text-white text-sm hover:underline flex items-center gap-1"
                     >
                       Edit <Edit2 className="w-3 h-3" />
-                    </button>
+                    </button> */}
                   </div>
 
                   <div className="p-4">
