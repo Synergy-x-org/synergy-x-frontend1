@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Edit2, Shield } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { paymentsAPI } from "@/services/paymentsAPI";
 
 type QuoteLike = {
   quoteReference: string;
@@ -60,6 +61,7 @@ type ProtectionState = {
   quoteReference?: string;
   quote?: QuoteLike;
   reservationDraft?: ReservationDraft;
+  reservationId?: string;
 };
 
 const PRIMARY = "#E85C2B";
@@ -73,27 +75,31 @@ const PaymentProtection: React.FC = () => {
   }, [location.state]);
 
   const payload = useMemo(() => {
-    const fromState = {
-      quote: state.quote,
-      reservationDraft: state.reservationDraft,
-      quoteReference: state.quoteReference || state.quote?.quoteReference,
-    };
+  const fromState = {
+    quote: state.quote,
+    reservationDraft: state.reservationDraft,
+    quoteReference: state.quoteReference || state.quote?.quoteReference,
+    reservationId: state.reservationId, // ✅ NEW
+  };
 
-    if (fromState.quoteReference && fromState.reservationDraft) return fromState;
-
-    try {
-      const saved = sessionStorage.getItem("pendingPaymentProtection");
-      if (saved) return JSON.parse(saved) as typeof fromState;
-    } catch {
-      // ignore
-    }
-
+  if (fromState.quoteReference && fromState.reservationDraft && fromState.reservationId)
     return fromState;
-  }, [state]);
+
+  try {
+    const saved = sessionStorage.getItem("pendingPaymentProtection");
+    if (saved) return JSON.parse(saved) as typeof fromState;
+  } catch {
+    // ignore
+  }
+
+  return fromState;
+}, [state]);
+
 
   const quote = payload.quote;
   const reservationDraft = payload.reservationDraft;
   const quoteReference = payload.quoteReference;
+  const reservationId = payload.reservationId; // ✅ NEW
 
   const shipDate =
     reservationDraft?.shipmentDate ||
@@ -129,15 +135,16 @@ const PaymentProtection: React.FC = () => {
   }, [shippingRate, coverageCost]);
 
   useEffect(() => {
-    if (!quoteReference || !reservationDraft) {
-      toast({
-        title: "Missing reservation data",
-        description: "Please complete the reservation form again.",
-        variant: "destructive",
-      });
-      navigate("/online-reservation");
-      return;
-    }
+    if (!quoteReference || !reservationDraft || !reservationId) {
+  toast({
+    title: "Missing reservation data",
+    description: "Please complete the reservation form again.",
+    variant: "destructive",
+  });
+  navigate("/online-reservation");
+  return;
+}
+
 
     sessionStorage.setItem(
       "pendingPaymentProtection",
@@ -145,6 +152,7 @@ const PaymentProtection: React.FC = () => {
         quoteReference,
         quote,
         reservationDraft,
+        reservationId, // ✅ NEW
       })
     );
   }, [quoteReference, reservationDraft, quote, navigate]);
@@ -165,34 +173,44 @@ const PaymentProtection: React.FC = () => {
     });
   };
 
-  const handleProceedToPayment = () => {
-    if (!quoteReference || !reservationDraft) return;
+ const handleProceedToPayment = async () => {
+  if (!quoteReference || !reservationDraft || !reservationId) return;
 
+  try {
+    // 1) create Stripe checkout session
+    const checkout = await paymentsAPI.createCheckoutSession(reservationId);
+
+    if (!checkout?.sessionUrl || !checkout?.sessionId) {
+      throw new Error("Missing Stripe sessionUrl/sessionId from backend.");
+    }
+
+    // 2) store info for confirmation page polling
     sessionStorage.setItem(
       "pendingReservationPayment",
       JSON.stringify({
         quoteReference,
         quote,
         reservationDraft,
+        reservationId,
         coverageAmount,
         coverageCost,
         totalToPayNow,
+        sessionId: checkout.sessionId, // ✅ NEW
       })
     );
 
-    navigate("/reservation-payment", {
-      state: {
-        quoteReference,
-        quote,
-        reservationDraft,
-        coverageAmount,
-        coverageCost,
-        totalToPayNow,
-      },
+    // 3) IMPORTANT: Redirect user to Stripe hosted checkout
+    window.location.assign(checkout.sessionUrl);
+  } catch (err: any) {
+    toast({
+      title: "Payment error",
+      description: err?.message || "Failed to start payment session.",
+      variant: "destructive",
     });
-  };
+  }
+};
 
-  if (!quoteReference || !reservationDraft) return null;
+if (!quoteReference || !reservationDraft || !reservationId) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

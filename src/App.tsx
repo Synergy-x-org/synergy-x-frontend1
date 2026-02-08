@@ -31,6 +31,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ReservationPayment from "./pages/ReservationPayment"
 import PaymentSuccessful from "./pages/PaymentSuccessful";
 import PaymentDeclined from "./pages/PaymentDeclined";
+import PaymentProcessing from "./pages/PaymentProcessing";
 
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/profile/reservations" element={<ProfileReservation />} />
             <Route path="/reservation-payment" element={<ReservationPayment />} />
 
+            <Route path="/payment-processing" element={<PaymentProcessing />} />
             <Route path="/payment-successful" element={<PaymentSuccessful />} />
             <Route path="/payment-declined" element={<PaymentDeclined />} />
 
