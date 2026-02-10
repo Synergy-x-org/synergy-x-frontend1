@@ -1,6 +1,7 @@
 // ✅ Updated File: src/pages/ProfileReservations.tsx
-// Only change: add placeholder text "Start date" and "End date" on the date inputs.
-// (Nothing else edited.)
+// Only change from your last file: map "Amount" to backend `price` (fallback to `amount`)
+// and also fill Location/Destination/Date/Vehicle from the default endpoint shape.
+// Placeholders "Start date" and "End date" are kept exactly as you had them.
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Filter, ChevronDown } from "lucide-react";
@@ -69,11 +70,21 @@ const formatMoney = (value?: number) => {
 
 const toUiFromUserProfile = (r: UserProfileReservation): UiReservation => ({
   id: r.reservationId,
-  vehicleModel: r.quoteReference ? `Quote ${r.quoteReference}` : "—",
-  location: "—",
-  destination: "—",
-  date: r.createdAt || "—",
-  amount: formatMoney(r.amount),
+  vehicleModel:
+    (r as any).vehicle ||
+    (r.quoteReference ? `Quote ${r.quoteReference}` : "—"),
+  location: (r as any).pickupAddress || "—",
+  destination: (r as any).deliveryAddress || "—",
+  date:
+    (r as any).reservationDate ||
+    (r as any).pickupDate ||
+    (r as any).deliveryDate ||
+    r.createdAt ||
+    "—",
+  // ✅ FIX: Amount column should be the price
+  amount: formatMoney(
+    typeof (r as any).price === "number" ? (r as any).price : r.amount
+  ),
   status: mapStatus(r.status),
 });
 
@@ -312,7 +323,11 @@ const ProfileReservations = () => {
           </Button>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="gap-2" disabled={disableFilterBy}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={disableFilterBy}
+            >
               <Filter className="w-4 h-4" />
               Filter By
             </Button>
@@ -353,24 +368,23 @@ const ProfileReservations = () => {
                   value={startDate}
                   onFocus={(e) => (e.currentTarget.type = "date")}
                   onBlur={(e) => {
-                  if (!startDate) e.currentTarget.type = "text";
+                    if (!startDate) e.currentTarget.type = "text";
                   }}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-[160px]"
-                  />
+                />
 
-                  <Input
+                <Input
                   type="text"
                   placeholder="End date"
                   value={endDate}
                   onFocus={(e) => (e.currentTarget.type = "date")}
                   onBlur={(e) => {
-                  if (!endDate) e.currentTarget.type = "text";
+                    if (!endDate) e.currentTarget.type = "text";
                   }}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-[160px]"
-                  />
-
+                />
               </>
             ) : (
               <Button variant="outline" className="gap-2" disabled>
@@ -438,7 +452,9 @@ const ProfileReservations = () => {
         )}
 
         {!loading && error && (
-          <div className="py-10 text-center text-sm text-destructive">{error}</div>
+          <div className="py-10 text-center text-sm text-destructive">
+            {error}
+          </div>
         )}
 
         {!loading && !error && rows.length === 0 && (
