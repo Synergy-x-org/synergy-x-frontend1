@@ -15,6 +15,7 @@ import {
   Package,
   LayoutDashboard,
 } from "lucide-react";
+import {useNavigate} from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -74,7 +75,11 @@ const AdminDashboard = () => {
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["Dashboard"]);
 
   // ✅ Declare user BEFORE using it
-  const { token, user } = useAuth() as any;
+  const { token, user, logout } = useAuth() as any;
+
+  
+
+
 
   // ✅ Derive real name/email from auth user (supports both shapes)
   const firstName = user?.firstName ?? user?.userDetails?.firstName ?? "";
@@ -167,6 +172,14 @@ const AdminDashboard = () => {
     }));
   }, [reservations]);
 
+  const navigate = useNavigate();
+
+  
+  const handleLogout = () => {
+  logout?.();          // clear auth state
+  navigate("/login"); // redirect
+};
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -228,9 +241,13 @@ const AdminDashboard = () => {
                 <p className="text-xs text-gray-500">{email || "-"}</p>
               </div>
             </div>
-            <button className="text-gray-400 hover:text-gray-600">
-              <LogOut className="w-5 h-5" />
-            </button>
+            <button
+  onClick={handleLogout}
+  className="text-gray-400 hover:text-gray-600"
+>
+  <LogOut className="w-5 h-5" />
+</button>
+
           </div>
         </div>
       </aside>
