@@ -128,7 +128,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ initialData, onSubmit }) => {
           year: parseInt(formData.year),
         });
         toast({ title: "Success!", description: "Quote calculated successfully." });
-        navigate("/quote-result", { state: { quote: response } });
+        navigate("/quote-result-step-two", { state: { quote: response } });
       }
     } catch (error: any) {
       toast({

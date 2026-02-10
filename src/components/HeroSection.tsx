@@ -58,11 +58,12 @@ const HeroSection = () => {
 
             {/* ✅ Buttons side-by-side (same box) */}
             <div className="flex flex-wrap gap-4">
-              <Link to="/shipping-quote">
+              <Link to="/moving-cost-calculator">
                 <Button size="lg" className="bg-primary hover:bg-primary/90">
-                  Get a Free Quote
+                  Get A Free Quote
                 </Button>
               </Link>
+
 
               {isLoggedIn && (
                 <Link to="/profile/track-shipment">

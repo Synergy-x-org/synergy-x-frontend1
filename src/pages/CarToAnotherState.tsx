@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import QuoteForm from "@/components/QuoteForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -123,7 +124,7 @@ const ShipCarToAnotherState = () => {
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/40" />
 
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between h-full container mx-auto px-6 py-10">
+<div className="relative z-10 flex flex-col md:flex-row items-center justify-between h-full container mx-auto px-6 py-10 md:pt-24">
         {/* === LEFT SIDE TEXT === */}
         <div className="text-white max-w-lg md:w-1/2">
           <h1 className="text-5xl font-bold mb-4">Ship to Another State</h1>
@@ -140,137 +141,13 @@ const ShipCarToAnotherState = () => {
         </div>
 
         {/* === RIGHT SIDE FORM === */}
-        <Card className="p-8 bg-white/95 shadow-2xl rounded-2xl max-w-md w-full md:w-1/2">
-          <h3 className="text-xl font-semibold mb-4 text-center">
-            Calculate your shipping cost
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Pickup */}
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 text-gray-400" size={18} />
-              <Input
-                placeholder="Location"
-                className="pl-9"
-                value={formData.pickupLocation}
-                onChange={(e) =>
-                  setFormData({ ...formData, pickupLocation: e.target.value })
-                }
-              />
-              {pickupSuggestions.length > 0 && (
-                <ul className="absolute bg-white border rounded-md mt-1 w-full z-50 shadow">
-                  {pickupSuggestions.map((s, i) => (
-                    <li
-                      key={i}
-                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => {
-                        setFormData({ ...formData, pickupLocation: s });
-                        setPickupSuggestions([]);
-                      }}
-                    >
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+<div className="w-full md:w-[560px] md:ml-auto md:mt-16">
+  <QuoteForm />
+</div>
 
-            {/* Delivery */}
-            <div className="relative">
-              <Navigation className="absolute left-3 top-3 text-gray-400" size={18} />
-              <Input
-                placeholder="Destination"
-                className="pl-9"
-                value={formData.deliveryLocation}
-                onChange={(e) =>
-                  setFormData({ ...formData, deliveryLocation: e.target.value })
-                }
-              />
-              {deliverySuggestions.length > 0 && (
-                <ul className="absolute bg-white border rounded-md mt-1 w-full z-50 shadow">
-                  {deliverySuggestions.map((s, i) => (
-                    <li
-                      key={i}
-                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => {
-                        setFormData({ ...formData, deliveryLocation: s });
-                        setDeliverySuggestions([]);
-                      }}
-                    >
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
 
-            {/* Brand, Model, Year */}
-            <Select
-              value={formData.brand}
-              onValueChange={(value) => setFormData({ ...formData, brand: value })}
-            >
-              <SelectTrigger><SelectValue placeholder="Brand" /></SelectTrigger>
-              <SelectContent>
-                {carBrands.map((b) => (
-                  <SelectItem key={b} value={b}>{b}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
-            <Select
-              value={formData.model}
-              onValueChange={(value) => setFormData({ ...formData, model: value })}
-              disabled={!formData.brand}
-            >
-              <SelectTrigger><SelectValue placeholder="Car Model" /></SelectTrigger>
-              <SelectContent>
-                {Object.keys(carModels).map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={formData.year}
-              onValueChange={(value) => setFormData({ ...formData, year: value })}
-              disabled={!formData.model}
-            >
-              <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-              <SelectContent>
-                {formData.model &&
-                  carModels[formData.model]?.map((y) => (
-                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-
-            {/* Date, Email, Phone */}
-            <Input
-              type="date"
-              value={formData.pickupDate}
-              onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
-            />
-            <Input
-              type="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-            <Input
-              type="tel"
-              placeholder="Phone Number"
-              value={formData.phoneNumber}
-              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            />
-
-            <Button
-              type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg"
-              disabled={loading}
-            >
-              {loading ? "Calculating..." : "Get Free A Quote"}
-            </Button>
-          </form>
-        </Card>
+        
       </div>
 
       {/* === WHAT IS SHIP SECTION === */}
