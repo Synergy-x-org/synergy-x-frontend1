@@ -14,8 +14,12 @@ const PaymentProcessing: React.FC = () => {
   // 2) location.state
   // 3) sessionStorage pendingReservationPayment
   const sessionId = useMemo(() => {
+    // const qs = new URLSearchParams(window.location.search);
+    // const fromQuery = qs.get("sessionId");
+
     const qs = new URLSearchParams(window.location.search);
-    const fromQuery = qs.get("sessionId");
+    const sessionId = qs.get("sessionId") || qs.get("session_id");
+
     if (fromQuery) return fromQuery;
 
     const fromState = (location.state as any)?.sessionId as string | undefined;
