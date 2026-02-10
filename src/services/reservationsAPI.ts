@@ -242,8 +242,12 @@ export type SecureReservationRequest = {
 };
 
 // ✅ helpers MUST live OUTSIDE the object
+// const resolveToken = (token?: string | null) =>
+//   token || localStorage.getItem("synergyx_token");
+
 const resolveToken = (token?: string | null) =>
-  token || localStorage.getItem("synergyx_token");
+  token || localStorage.getItem("synergyx_token") || localStorage.getItem("token");
+
 
 const safeJson = async (res: Response) => {
   const text = await res.text();
@@ -255,6 +259,8 @@ const safeJson = async (res: Response) => {
 };
 
 export const reservationsAPI = {
+
+  
   // ✅ NEW: Secure Reservation (POST /secure)
   secureReservation: async (
     body: SecureReservationRequest,

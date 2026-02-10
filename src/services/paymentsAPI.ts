@@ -46,7 +46,7 @@ export const paymentsAPI = {
       `${BASE_URL}/payments/checkout?reservationId=${encodeURIComponent(
         reservationId
       )}`,
-      { method: "GET" }
+      { method: "POST" }
     );
 
     const data = await safeJson(res);
