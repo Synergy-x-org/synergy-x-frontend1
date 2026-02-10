@@ -237,8 +237,8 @@ export type SecureReservationRequest = {
   pickupContactPrimaryPhoneNumber: string;
   deliveryContactName: string;
   deliveryContactPrimaryPhoneNumber: string;
-  pickUpResidenceType: "RESIDENTIAL" | "BUSINESS";
-  deliveryResidentialType: "RESIDENTIAL" | "BUSINESS";
+  pickUpResidenceType: "RESIDENTIAL" | "BUSINESS" | "OFFICE";
+  deliveryResidentialType: "RESIDENTIAL" | "BUSINESS" | "OFFICE";
 };
 
 // ✅ helpers MUST live OUTSIDE the object

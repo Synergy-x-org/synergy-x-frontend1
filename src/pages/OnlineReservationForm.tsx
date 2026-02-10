@@ -42,14 +42,14 @@ type ReservationDraft = {
   pickupContactName: string;
   pickupContactPrimaryPhoneNumber: string;
   pickupContactSecondaryPhoneNumber?: string;
-  pickUpResidenceType: "RESIDENTIAL" | "BUSINESS";
+  pickUpResidenceType: "RESIDENTIAL" | "BUSINESS" | "OFFICE";
 
   deliveryAddress: string;
   deliveryLocation: string;
   deliveryContactName: string;
   deliveryContactPrimaryPhoneNumber: string;
   deliveryContactSecondaryPhoneNumber?: string;
-  deliveryResidentialType: "RESIDENTIAL" | "BUSINESS";
+  deliveryResidentialType: "RESIDENTIAL" | "BUSINESS" | "OFFICE" ;
 
   carrierType?: "open" | "enclosed";
   vehicle?: string;
@@ -372,9 +372,10 @@ const OnlineReservationForm: React.FC = () => {
 
   // Pickup
   const [pickupSameAsPrimary, setPickupSameAsPrimary] = useState(false);
-  const [pickupLocationType, setPickupLocationType] = useState<"RESIDENTIAL" | "BUSINESS">(
-    initialDraft?.pickUpResidenceType || "RESIDENTIAL"
-  );
+  const [pickupLocationType, setPickupLocationType] = useState<
+  "RESIDENTIAL" | "BUSINESS" | "OFFICE"
+>(initialDraft?.pickUpResidenceType || "RESIDENTIAL");
+
 
   const [pickupContactName, setPickupContactName] = useState(
     initialDraft?.pickupContactName || ""
@@ -400,7 +401,7 @@ const OnlineReservationForm: React.FC = () => {
   // Delivery
   const [deliverySameAsPrimary, setDeliverySameAsPrimary] = useState(false);
   const [deliveryResidentialType, setDeliveryResidentialType] = useState<
-    "RESIDENTIAL" | "BUSINESS"
+    "RESIDENTIAL" | "BUSINESS" | "OFFICE"
   >(initialDraft?.deliveryResidentialType || "RESIDENTIAL");
 
   const [deliveryContactName, setDeliveryContactName] = useState(
@@ -721,6 +722,8 @@ const OnlineReservationForm: React.FC = () => {
                     <SelectContent>
                       <SelectItem value="RESIDENTIAL">Residence</SelectItem>
                       <SelectItem value="BUSINESS">Business</SelectItem>
+                      <SelectItem value="OFFICE">Office</SelectItem>
+
                     </SelectContent>
                   </Select>
                 </div>
@@ -832,7 +835,8 @@ const OnlineReservationForm: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="RESIDENTIAL">Residence</SelectItem>
-                      <SelectItem value="BUSINESS">Business</SelectItem>
+                        <SelectItem value="BUSINESS">Business</SelectItem>
+                        <SelectItem value="OFFICE">Office</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
