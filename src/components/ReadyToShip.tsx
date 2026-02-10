@@ -7,7 +7,7 @@ const ReadyToShip = () => {
   const navigate = useNavigate(); // Initialize useNavigate
 
   const handleGetQuote = () => {
-    navigate('/shipping-quote'); // Navigate to shipping quote page
+    navigate('/moving-cost-calculator'); // Navigate to shipping quote page
   };
 
   return (

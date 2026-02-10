@@ -76,9 +76,12 @@ const DoorToDoorShipping = () => {
             <p className="text-lg md:text-xl mb-8 max-w-2xl">
               Get your car delivered safely, anytime, anywhere. Fast, secure, and affordable auto transport for individuals and businesses.
             </p>
-            <Link to="/login">
-              <Button size="lg" className="bg-primary hover:bg-primary/90">Get a free shipping quote now!</Button>
-            </Link>
+            <Link to="/moving-cost-calculator">
+  <Button size="lg" className="bg-primary hover:bg-primary/90">
+    Get a free shipping quote now!
+  </Button>
+</Link>
+
           </div>
           <div className="md:w-1/2 mt-10 md:mt-0">
             <Card className="shadow-lg">

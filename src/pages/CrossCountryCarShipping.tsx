@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -130,9 +131,12 @@ const ShipCarToAnotherState = () => {
             Get your car delivered safely, anywhere, anytime. Fast, secure,
             and affordable auto transport for individuals and businesses.
           </p>
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-6 py-4 rounded-lg">
-            Get Free A Quote
-          </Button>
+          <Link to="/moving-cost-calculator">
+  <Button size="lg" className="bg-primary hover:bg-primary/90">
+    Get a free quote!
+  </Button>
+</Link>
+
         </div>
 
         {/* === RIGHT SIDE FORM === */}
