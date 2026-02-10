@@ -310,6 +310,7 @@ export const reservationsAPI = {
     if (!token) throw new Error("You must be logged in.");
 
     const res = await fetch(`${BASE_URL}/user-profile/quote/${quoteReference}`, {
+      method: "GET",
       headers: { Authorization: `Bearer ${token}` },
     });
 

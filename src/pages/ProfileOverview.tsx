@@ -1,22 +1,16 @@
-// ✅ Updated File: src/pages/ProfileOverview.tsx
-// Frontend-computed totals (totalReservations, pendingReservations, totalShipped)
-// derived from the same reservations list used in the table.
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import {
-  reservationsAPI,
-  type UserProfileReservation,
-} from "@/services/reservationsAPI";
+import { reservationsAPI } from "@/services/reservationsAPI";
 
-type DashboardData = {
-  totalReservations?: number;
-  pendingReservations?: number;
-  totalShipped?: number;
+type DashboardStats = {
+  totalReservations: number;
+  successfulReservations: number;
+  pendingReservations: number;
+  failedReservations: number;
 };
 
-type OverviewReservationRow = {
+type OverviewRow = {
   vehicleModel: string;
   pickupLocation: string;
   dropoffLocation: string;
@@ -39,73 +33,72 @@ const formatMoney = (value?: number) => {
 const pickDate = (r: any) =>
   r?.reservationDate || r?.pickupDate || r?.deliveryDate || r?.createdAt || "-";
 
-// same logic as your reservations page, but simplified for overview
-const mapStatus = (raw?: string): "PENDING" | "SHIPPED" | "OTHER" => {
-  const s = (raw || "").toUpperCase();
+// ✅ Extract stats no matter which backend shape comes back
+const extractDashboardStats = (json: any): DashboardStats => {
+  const maybe =
+    json?.data?.data ||
+    json?.data ||
+    json?.dashboard ||
+    json?.data?.dashboard ||
+    json ||
+    null;
 
-  if (s === "PENDING") return "PENDING";
+  // 1) New shape: { stats: [{category,totalCount}] }
+  if (maybe?.stats && Array.isArray(maybe.stats)) {
+    const getCount = (name: string) => {
+      const found = maybe.stats.find(
+        (s: any) => String(s?.category || "").toLowerCase() === name.toLowerCase()
+      );
+      const n = found?.totalCount;
+      return typeof n === "number" ? n : 0;
+    };
 
-  // treat these as shipped/in-progress states
-  if (s === "SHIPPED" || s === "DELIVERED") return "SHIPPED";
+    return {
+      totalReservations: getCount("Total Reservations"),
+      pendingReservations: getCount("Pending Reservations"),
+      successfulReservations: getCount("Successful Reservations"),
+      failedReservations: getCount("Failed Reservations"),
+    };
+  }
 
-  // SUCCESSFUL might mean payment success; if your business logic says
-  // "SUCCESSFUL = shipped", move it into SHIPPED. Otherwise leave as OTHER.
-  // If you want SUCCESSFUL counted as shipped, uncomment next line:
-  // if (s === "SUCCESSFUL") return "SHIPPED";
-
-  return "OTHER";
+  // 2) Old/flat shape: { totalReservations, pendingReservations, ... }
+  return {
+    totalReservations: Number(maybe?.totalReservations ?? 0) || 0,
+    pendingReservations: Number(maybe?.pendingReservations ?? 0) || 0,
+    successfulReservations: Number(maybe?.successfulReservations ?? 0) || 0,
+    failedReservations: Number(maybe?.failedReservations ?? 0) || 0,
+  };
 };
-
-const mapOverviewRow = (r: UserProfileReservation): OverviewReservationRow => ({
-  vehicleModel:
-    (r as any).vehicle ||
-    ((r as any).vehicleModel as string) ||
-    (r.quoteReference ? `Quote ${r.quoteReference}` : "-"),
-  pickupLocation: (r as any).pickupAddress || (r as any).pickupLocation || "-",
-  dropoffLocation:
-    (r as any).deliveryAddress || (r as any).dropoffLocation || "-",
-  date: pickDate(r),
-  amount: formatMoney(
-    typeof (r as any).price === "number" ? (r as any).price : r.amount
-  ),
-  status: (r.status as string) || "-",
-});
 
 const ProfileOverview = () => {
   const { user, token } = useAuth();
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // dashboard endpoint (optional fallback)
-  const [dashboard, setDashboard] = useState<DashboardData>({
+  // ✅ stats from dashboard endpoint
+  const [stats, setStats] = useState<DashboardStats>({
     totalReservations: 0,
+    successfulReservations: 0,
     pendingReservations: 0,
-    totalShipped: 0,
+    failedReservations: 0,
   });
 
-  // ✅ reservations list fetched from backend (source of truth for frontend totals)
-  const [rawReservations, setRawReservations] = useState<UserProfileReservation[]>(
-    []
-  );
-
-  const [reservationRows, setReservationRows] = useState<OverviewReservationRow[]>(
-    []
-  );
-
-  const [error, setError] = useState<string | null>(null);
+  // ✅ rows from reservations list endpoint
+  const [rows, setRows] = useState<OverviewRow[]>([]);
 
   useEffect(() => {
     const run = async () => {
       if (!token) {
         setLoading(false);
         setError(null);
-        setDashboard({
+        setStats({
           totalReservations: 0,
+          successfulReservations: 0,
           pendingReservations: 0,
-          totalShipped: 0,
+          failedReservations: 0,
         });
-        setRawReservations([]);
-        setReservationRows([]);
+        setRows([]);
         return;
       }
 
@@ -113,56 +106,41 @@ const ProfileOverview = () => {
         setLoading(true);
         setError(null);
 
-        // 1) Fetch reservations (same as reservations page)
-        const list = await reservationsAPI.getUserProfileReservations(token);
-        const safeList = Array.isArray(list) ? list : [];
-        setRawReservations(safeList);
+        // 1) DASHBOARD STATS
+        const dashRes = await fetch(DASHBOARD_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-        // Table preview
-        const mappedRows = safeList.map(mapOverviewRow);
-        setReservationRows(mappedRows.slice(0, 5));
-
-        // 2) OPTIONAL: fetch dashboard (if it works) as fallback only
+        const dashText = await dashRes.text();
+        let dashJson: any = null;
         try {
-          const dashRes = await fetch(DASHBOARD_URL, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-
-          const dashText = await dashRes.text();
-          let dashJson: any = null;
-
-          try {
-            dashJson = JSON.parse(dashText);
-          } catch {
-            dashJson = null;
-          }
-
-          if (dashRes.ok) {
-            const maybeData =
-              dashJson?.data?.data ||
-              dashJson?.data ||
-              dashJson?.dashboard ||
-              dashJson?.data?.dashboard ||
-              null;
-
-            setDashboard({
-              totalReservations: maybeData?.totalReservations ?? 0,
-              pendingReservations: maybeData?.pendingReservations ?? 0,
-              totalShipped: maybeData?.totalShipped ?? 0,
-            });
-          }
+          dashJson = JSON.parse(dashText);
         } catch {
-          // ignore dashboard failure; we already have list-based totals
+          dashJson = null;
         }
+
+        if (!dashRes.ok) {
+          throw new Error(dashJson?.message || dashText || "Failed to load dashboard");
+        }
+
+        // ✅ IMPORTANT: parse stats[] correctly
+        setStats(extractDashboardStats(dashJson));
+
+        // 2) RESERVATION LIST FOR TABLE
+        const list = await reservationsAPI.getUserProfileReservations(token);
+
+        const mapped = (Array.isArray(list) ? list : []).map((r: any) => ({
+          vehicleModel: r.vehicle || "-",
+          pickupLocation: r.pickupAddress || "-",
+          dropoffLocation: r.deliveryAddress || "-",
+          date: pickDate(r),
+          amount: formatMoney(r.price ?? r.amount),
+          status: r.status || "-",
+        }));
+
+        setRows(mapped.slice(0, 5));
       } catch (e: any) {
         console.error("ProfileOverview error:", e);
-        setDashboard({
-          totalReservations: 0,
-          pendingReservations: 0,
-          totalShipped: 0,
-        });
-        setRawReservations([]);
-        setReservationRows([]);
         setError(e?.message || "Failed to load overview");
       } finally {
         setLoading(false);
@@ -171,32 +149,6 @@ const ProfileOverview = () => {
 
     run();
   }, [token]);
-
-  // ✅ FRONTEND totals computed from rawReservations
-  const computedTotals = useMemo(() => {
-    const totalReservations = rawReservations.length;
-
-    let pendingReservations = 0;
-    let totalShipped = 0;
-
-    for (const r of rawReservations) {
-      const bucket = mapStatus(r.status);
-
-      if (bucket === "PENDING") pendingReservations += 1;
-      if (bucket === "SHIPPED") totalShipped += 1;
-    }
-
-    return { totalReservations, pendingReservations, totalShipped };
-  }, [rawReservations]);
-
-  // ✅ Use computed totals first; fallback to dashboard endpoint if needed
-  const totalReservations =
-    computedTotals.totalReservations ?? dashboard.totalReservations ?? 0;
-  const pendingReservations =
-    computedTotals.pendingReservations ?? dashboard.pendingReservations ?? 0;
-  const totalShipped = computedTotals.totalShipped ?? dashboard.totalShipped ?? 0;
-
-  const hasReservations = reservationRows.length > 0;
 
   if (loading) {
     return (
@@ -225,46 +177,26 @@ const ProfileOverview = () => {
   return (
     <div className="space-y-8">
       {/* Welcome */}
-      <div>
-        <h2 className="text-2xl font-semibold text-foreground">
-          Welcome {user?.firstName}
-        </h2>
-      </div>
+      <h2 className="text-2xl font-semibold text-foreground">
+        Welcome {user?.firstName}
+      </h2>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <p className="text-sm text-muted-foreground">Total Reservations</p>
-          <p className="text-3xl font-bold mt-2">{totalReservations}</p>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <p className="text-sm text-muted-foreground">
-            Total Pending Reservation
-          </p>
-          <p className="text-3xl font-bold mt-2">{pendingReservations}</p>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <p className="text-sm text-muted-foreground">Total Shipped</p>
-          <p className="text-3xl font-bold mt-2">{totalShipped}</p>
-        </div>
+        <StatCard title="Total Reservations" value={stats.totalReservations} />
+        <StatCard title="Total Pending Reservation" value={stats.pendingReservations} />
+        <StatCard title="Total Successful (Shipped)" value={stats.successfulReservations} />
       </div>
 
       {/* Reservation Details */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h3 className="font-semibold text-foreground">Reservation Details</h3>
-
-          <Link
-            to="/profile/reservations"
-            className="text-sm text-primary cursor-pointer"
-          >
+          <Link to="/profile/reservations" className="text-sm text-primary cursor-pointer">
             See All
           </Link>
         </div>
 
-        {/* Table Header */}
         <div className="grid grid-cols-6 gap-4 px-6 py-3 text-sm text-muted-foreground border-b">
           <div>Vehicle Model</div>
           <div>Location</div>
@@ -274,22 +206,22 @@ const ProfileOverview = () => {
           <div>Status</div>
         </div>
 
-        {!hasReservations ? (
+        {!rows.length ? (
           <div className="px-6 py-10 text-center text-sm text-muted-foreground">
             No reservations yet
           </div>
         ) : (
-          reservationRows.map((r, idx) => (
+          rows.map((r, idx) => (
             <div
               key={idx}
               className="grid grid-cols-6 gap-4 px-6 py-4 border-b text-sm"
             >
-              <div className="truncate">{r.vehicleModel || "-"}</div>
-              <div className="truncate">{r.pickupLocation || "-"}</div>
-              <div className="truncate">{r.dropoffLocation || "-"}</div>
-              <div className="truncate">{r.date || "-"}</div>
-              <div className="truncate">{r.amount || "-"}</div>
-              <div className="truncate">{r.status || "-"}</div>
+              <div className="truncate">{r.vehicleModel}</div>
+              <div className="truncate">{r.pickupLocation}</div>
+              <div className="truncate">{r.dropoffLocation}</div>
+              <div className="truncate">{r.date}</div>
+              <div className="truncate">{r.amount}</div>
+              <div className="truncate">{r.status}</div>
             </div>
           ))
         )}
@@ -297,5 +229,12 @@ const ProfileOverview = () => {
     </div>
   );
 };
+
+const StatCard = ({ title, value }: { title: string; value: number }) => (
+  <div className="bg-white rounded-lg p-6 shadow-sm">
+    <p className="text-sm text-muted-foreground">{title}</p>
+    <p className="text-3xl font-bold mt-2">{value}</p>
+  </div>
+);
 
 export default ProfileOverview;

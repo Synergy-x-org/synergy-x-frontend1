@@ -218,51 +218,92 @@ const ProfileReservations = () => {
     run();
   }, [filterBy, locationKeyword, token]);
 
-  const handleSearch = async () => {
-    const q = search.trim();
-    if (!q) return;
+  // const handleSearch = async () => {
+  //   const q = search.trim();
+  //   if (!q) return;
 
-    if (!token) {
-      setError("You must be logged in.");
+  //   if (!token) {
+  //     setError("You must be logged in.");
+  //     return;
+  //   }
+
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+
+  //     const one = await reservationsAPI.getUserProfileByQuoteReference(q, token);
+
+  //     if (one?.reservationId) {
+  //       setAllReservations([
+  //         {
+  //           id: one.reservationId,
+  //           vehicleModel: one.quoteReference ? `Quote ${one.quoteReference}` : "—",
+  //           location: "—",
+  //           destination: "—",
+  //           date: "—",
+  //           amount: formatMoney(one.amount),
+  //           status: mapStatus(one.status),
+  //         },
+  //       ]);
+  //       return;
+  //     }
+
+  //     setAllReservations((prev) =>
+  //       prev.filter(
+  //         (r) =>
+  //           r.id.toLowerCase().includes(q.toLowerCase()) ||
+  //           r.vehicleModel.toLowerCase().includes(q.toLowerCase())
+  //       )
+  //     );
+  //   } catch {
+  //     setAllReservations((prev) =>
+  //       prev.filter((r) => r.id.toLowerCase().includes(q.toLowerCase()))
+  //     );
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const handleSearch = async () => {
+  const q = search.trim();
+  if (!q) return;
+
+  if (!token) {
+    setError("You must be logged in.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setError(null);
+
+    const one = await reservationsAPI.getUserProfileByQuoteReference(q, token);
+
+    if (!one?.reservationId) {
+      setAllReservations([]);
+      setError("No reservation found for that quote reference.");
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
+    setAllReservations([
+      {
+        id: one.reservationId,
+        vehicleModel: one.quoteReference ? `Quote ${one.quoteReference}` : "—",
+        location: "—",
+        destination: "—",
+        date: "—",
+        amount: formatMoney(one.amount),
+        status: mapStatus(one.status),
+      },
+    ]);
+  } catch (e: any) {
+    setAllReservations([]);
+    setError(e?.message || "No reservation found for that quote reference.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-      const one = await reservationsAPI.getUserProfileByQuoteReference(q, token);
-
-      if (one?.reservationId) {
-        setAllReservations([
-          {
-            id: one.reservationId,
-            vehicleModel: one.quoteReference ? `Quote ${one.quoteReference}` : "—",
-            location: "—",
-            destination: "—",
-            date: "—",
-            amount: formatMoney(one.amount),
-            status: mapStatus(one.status),
-          },
-        ]);
-        return;
-      }
-
-      setAllReservations((prev) =>
-        prev.filter(
-          (r) =>
-            r.id.toLowerCase().includes(q.toLowerCase()) ||
-            r.vehicleModel.toLowerCase().includes(q.toLowerCase())
-        )
-      );
-    } catch {
-      setAllReservations((prev) =>
-        prev.filter((r) => r.id.toLowerCase().includes(q.toLowerCase()))
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const rows = useMemo(() => {
     let list = [...allReservations];
@@ -305,7 +346,7 @@ const ProfileReservations = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Reservation ID"
+              placeholder="Quote Reference"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
