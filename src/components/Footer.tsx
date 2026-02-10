@@ -15,14 +15,14 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <a href="#how-it-works" className="hover:text-primary transition-colors">
+                <Link to="/#how-it-works" className="hover:text-primary transition-colors">
                   How it works
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#why-choose-us" className="hover:text-primary transition-colors">
+                <Link to="/#why-choose-us" className="hover:text-primary transition-colors">
                   Why SynergyX
-                </a>
+                </Link>
               </li>
               <li>
                 <Link to="/contact" className="hover:text-primary transition-colors">
