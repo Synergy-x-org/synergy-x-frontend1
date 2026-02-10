@@ -106,15 +106,7 @@ const Header = () => {
               Contact Us
             </Link>
 
-            {/* ✅ Put Track Shipment back (only when logged in) */}
-            {/* {isLoggedIn && (
-              <Link
-                to="/profile/track-shipment"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Track Shipment
-              </Link>
-            )} */}
+      
           </nav>
 
           {/* User Greeting / CTA Button Desktop */}
