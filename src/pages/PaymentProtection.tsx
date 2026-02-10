@@ -1,8 +1,3 @@
-// PaymentProtection.tsx
-// ✅ NO UI CHANGES. This already uses quote.price as the base shippingRate.
-// Since OnlineReservationForm now overwrites quote.price with secureReservation.price,
-// PaymentProtection will automatically show the secure price for Coverage Amount and Coverage Cost.
-
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -178,7 +173,7 @@ const PaymentProtection: React.FC = () => {
 
   try {
     // 1) create Stripe checkout session
-    const checkout = await paymentsAPI.createCheckoutSession(reservationId);
+  const checkout = await paymentsAPI.createCheckoutSession(reservationId);
 
     if (!checkout?.sessionUrl || !checkout?.sessionId) {
       throw new Error("Missing Stripe sessionUrl/sessionId from backend.");
