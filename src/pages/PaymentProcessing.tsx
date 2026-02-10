@@ -61,8 +61,8 @@ const PaymentProcessing: React.FC = () => {
         const res = await paymentsAPI.getPaymentStatus(sessionId);
         if (!alive) return;
 
-        const token = resolveToken(tokenArg);
-        if (!token) throw new Error("You must be logged in.");
+        // const token = resolveToken(tokenArg);
+        // if (!token) throw new Error("You must be logged in.");
 
 
         setStatus(res.status);

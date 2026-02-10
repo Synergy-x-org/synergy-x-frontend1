@@ -720,7 +720,7 @@ const OnlineReservationForm: React.FC = () => {
                       <SelectValue placeholder="Residence" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="RESIDENTIAL">Residence</SelectItem>
+                      <SelectItem value="RESIDENTIAL">Residential</SelectItem>
                       <SelectItem value="BUSINESS">Business</SelectItem>
                       <SelectItem value="OFFICE">Office</SelectItem>
 
@@ -834,7 +834,7 @@ const OnlineReservationForm: React.FC = () => {
                       <SelectValue placeholder="Residence" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="RESIDENTIAL">Residence</SelectItem>
+                      <SelectItem value="RESIDENTIAL">Residential</SelectItem>
                         <SelectItem value="BUSINESS">Business</SelectItem>
                         <SelectItem value="OFFICE">Office</SelectItem>
                     </SelectContent>
