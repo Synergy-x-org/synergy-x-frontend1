@@ -29,30 +29,34 @@ const QuoteResultStepTwo = () => {
     return raw?.data ?? raw ?? null;
   }, [location.state]);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
+ useEffect(() => {
+  const token =
+    localStorage.getItem("synergyx_token") || localStorage.getItem("token");
 
-    if (!quote) {
-      toast({
-        title: "Error",
-        description: "No quote data found. Please calculate a new quote.",
-        variant: "destructive",
-      });
-      navigate("/");
-      setIsLoading(false);
-      return;
-    }
+  setIsLoggedIn(!!token);
 
-    setQuoteData({
-      ...quote,
-      vehicle: quote.vehicle ?? { brand: "", model: "", year: 0, id: "" },
-      distance: "N/A",
-      duration: "N/A",
+  if (!quote) {
+    toast({
+      title: "Error",
+      description: "No quote data found. Please calculate a new quote.",
+      variant: "destructive",
     });
-
+    navigate("/");
     setIsLoading(false);
-  }, [quote, navigate]);
+    return;
+  }
+
+  setQuoteData({
+    ...quote,
+    vehicle: quote.vehicle ?? { brand: "", model: "", year: 0, id: "" },
+    distance: "N/A",
+    duration: "N/A",
+  });
+
+  setIsLoading(false);
+}, [quote, navigate]);
+
+
 
   const handleGetStarted = () => {
     if (!quoteData) return;
