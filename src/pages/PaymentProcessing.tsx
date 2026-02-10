@@ -9,22 +9,17 @@ const PaymentProcessing: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ sessionId can come from:
-  // 1) query param: /payment-processing?sessionId=cs_test_...
-  // 2) location.state
-  // 3) sessionStorage pendingReservationPayment
   const sessionId = useMemo(() => {
-    // const qs = new URLSearchParams(window.location.search);
-    // const fromQuery = qs.get("sessionId");
-
+    // 1) query param: ?sessionId=... OR ?session_id=...
     const qs = new URLSearchParams(window.location.search);
-    const sessionId = qs.get("sessionId") || qs.get("session_id");
-
+    const fromQuery = qs.get("sessionId") || qs.get("session_id");
     if (fromQuery) return fromQuery;
 
+    // 2) navigation state
     const fromState = (location.state as any)?.sessionId as string | undefined;
     if (fromState) return fromState;
 
+    // 3) sessionStorage
     try {
       const saved = sessionStorage.getItem("pendingReservationPayment");
       if (saved) {
@@ -39,7 +34,7 @@ const PaymentProcessing: React.FC = () => {
   }, [location.state]);
 
   const [status, setStatus] = useState<PaymentStatus>("PENDING");
-  const [message, setMessage] = useState<string>(
+  const [message, setMessage] = useState(
     "Please be patient — we are confirming your payment..."
   );
 
@@ -50,13 +45,13 @@ const PaymentProcessing: React.FC = () => {
         description: "Payment sessionId not found. Please try again.",
         variant: "destructive",
       });
-      navigate("/payment-declined");
+      navigate("/payment-declined", { replace: true });
       return;
     }
 
     let alive = true;
     let tries = 0;
-    const MAX_TRIES = 40; // ~2 minutes if interval is 3s
+    const MAX_TRIES = 40;
     const INTERVAL_MS = 3000;
 
     const tick = async () => {
@@ -66,10 +61,13 @@ const PaymentProcessing: React.FC = () => {
         const res = await paymentsAPI.getPaymentStatus(sessionId);
         if (!alive) return;
 
+        const token = resolveToken(tokenArg);
+        if (!token) throw new Error("You must be logged in.");
+
+
         setStatus(res.status);
         setMessage(res.message || "");
 
-        // ✅ route based on status
         if (res.status === "SUCCEEDED") {
           navigate("/payment-successful", { replace: true });
           return;
@@ -85,15 +83,12 @@ const PaymentProcessing: React.FC = () => {
           return;
         }
 
-        // else PENDING: keep polling
         if (tries >= MAX_TRIES) {
-          // still pending after max tries
           setMessage(
             "Still confirming payment. If this takes too long, please refresh or contact support."
           );
         }
       } catch (err: any) {
-        // If backend says "Payment session not found" etc, treat as declined
         if (!alive) return;
         setMessage(err?.message || "Error checking payment status...");
       }
@@ -113,23 +108,17 @@ const PaymentProcessing: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
-
       <main className="flex-1 flex items-center justify-center py-16">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-lg w-full mx-4 text-center">
           <h1 className="text-2xl font-semibold text-foreground mb-3">
             Confirming Payment
           </h1>
-
-          <p className="text-gray-600 mb-6">
-            {message || "Please be patient — we are confirming your payment..."}
-          </p>
-
+          <p className="text-gray-600 mb-6">{message}</p>
           <div className="text-sm text-gray-500">
             Current Status: <span className="font-medium">{status}</span>
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );
