@@ -53,12 +53,12 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <a
-              href="#how-it-works"
+            <Link
+              to="/#how-it-works"
               className="text-sm font-medium hover:text-primary transition-colors"
             >
               How It Works
-            </a>
+            </Link>
 
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors focus:outline-none">
@@ -92,12 +92,12 @@ const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <a
-              href="#why-choose-us"
+            <Link
+              to="/#why-choose-us"
               className="text-sm font-medium hover:text-primary transition-colors"
             >
               Why Choose Us
-            </a>
+            </Link>
 
             <Link
               to="/contact"

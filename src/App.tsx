@@ -32,6 +32,8 @@ import ReservationPayment from "./pages/ReservationPayment"
 import PaymentSuccessful from "./pages/PaymentSuccessful";
 import PaymentDeclined from "./pages/PaymentDeclined";
 import PaymentProcessing from "./pages/PaymentProcessing";
+import HowCalculatorWorks from "./components/HowCalculatorWorks";
+import ScrollToHash from "./components/ScrollToHash";
 
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -45,6 +47,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+        <ScrollToHash />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
@@ -66,6 +69,7 @@ const App = () => (
               path="/cross-country-car-shipping"
               element={<CrossCountryCarShipping />}
             />
+            <Route path="/how-it-works" element={<HowCalculatorWorks />} />
             <Route path="/quote-result" element={<QuoteResult />} />
             <Route path="/quote-step-1" element={<QuoteStep1 />} />
             <Route path="/quote-result-step-two" element={<QuoteResultStepTwo />} />
