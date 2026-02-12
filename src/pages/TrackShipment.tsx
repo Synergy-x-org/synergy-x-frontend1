@@ -30,25 +30,26 @@ const TrackShipment: React.FC = () => {
       <div className="relative">
         {/* Background Image */}
         <div
-          className="w-full h-[500px] bg-cover bg-center"
-          style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1494412651409-8963ce7935a7?w=1920&q=80')`,
-          }}
-        >
-          <div className="absolute inset-0 bg-black/30" />
-        </div>
+    className="w-full min-h-[85vh] bg-cover bg-center flex items-center justify-center"
+    style={{
+      backgroundImage:
+        "url('https://images.unsplash.com/photo-1494412651409-8963ce7935a7?w=1920&q=80')",
+    }}
+  >
+    {/* dark overlay */}
+    <div className="absolute inset-0 bg-black/40" />
 
-        {/* Form Card Overlay (moved down) */}
-        <div className="absolute inset-0 flex items-start justify-center px-4 pt-20 md:pt-28">
-          <Card className="w-full max-w-md bg-white shadow-xl border-0">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold text-center text-gray-900 mb-2">
-                Track a shipment
-              </h2>
-              <p className="text-sm text-gray-500 text-center mb-6">
-                Enter the details of your booking below to access the Synergy X
-                Auto Transport tracking portal.
-              </p>
+    {/* Centered Card */}
+    <Card className="relative z-10 w-full max-w-md bg-white shadow-2xl border-0 mx-4">
+      <CardContent className="p-6">
+        <h2 className="text-xl font-semibold text-center text-gray-900 mb-2">
+          Track a shipment
+        </h2>
+
+        <p className="text-sm text-gray-500 text-center mb-6">
+          Enter the details of your booking below to access the Synergy X
+          Auto Transport tracking portal.
+        </p>
 
               {/* Booking Email */}
               <div className="mb-4">
@@ -59,7 +60,7 @@ const TrackShipment: React.FC = () => {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="email"
-                    placeholder="akinpelumijustnah@gmail.com"
+                    placeholder="johnstone@gmail.com"
                     value={bookingEmail}
                     onChange={(e) => setBookingEmail(e.target.value)}
                     className="pl-10 h-12 border-gray-200"
