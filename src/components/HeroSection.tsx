@@ -66,7 +66,7 @@ const HeroSection = () => {
 
 
               {isLoggedIn && (
-                <Link to="/profile/track-shipment">
+                <Link to="/track-shipment">
                   <Button
                     size="lg"
                     variant="outline"

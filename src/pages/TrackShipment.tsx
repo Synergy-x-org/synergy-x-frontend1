@@ -10,15 +10,13 @@ import { Mail, Hash } from "lucide-react";
 const TrackShipment: React.FC = () => {
   const navigate = useNavigate();
   const [bookingEmail, setBookingEmail] = useState("");
-  const [bookingId, setBookingId] = useState("");
+  const [quoteReference, setQuoteReference] = useState("");
 
   const handleSearch = () => {
-    // TODO: API endpoint to search shipment
-    // For now, navigate to result page with mock data
     navigate("/track-shipment-result", {
       state: {
         bookingEmail,
-        bookingId,
+        quoteReference,
       },
     });
   };
@@ -39,8 +37,8 @@ const TrackShipment: React.FC = () => {
           <div className="absolute inset-0 bg-black/30" />
         </div>
 
-        {/* Form Card Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center px-4">
+        {/* Form Card Overlay (moved down) */}
+        <div className="absolute inset-0 flex items-start justify-center px-4 pt-20 md:pt-28">
           <Card className="w-full max-w-md bg-white shadow-xl border-0">
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold text-center text-gray-900 mb-2">
@@ -68,18 +66,18 @@ const TrackShipment: React.FC = () => {
                 </div>
               </div>
 
-              {/* Booking ID */}
+              {/* Quote Reference */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Booking ID
+                  Quote Reference
                 </label>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="text"
-                    placeholder="e.g #1101342"
-                    value={bookingId}
-                    onChange={(e) => setBookingId(e.target.value)}
+                    placeholder="e.g 24041b03"
+                    value={quoteReference}
+                    onChange={(e) => setQuoteReference(e.target.value)}
                     className="pl-10 h-12 border-gray-200"
                   />
                 </div>

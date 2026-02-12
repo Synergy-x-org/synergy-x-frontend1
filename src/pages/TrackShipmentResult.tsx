@@ -1,74 +1,147 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface TrackingEvent {
-  status: string;
-  description: string;
-  time: string;
-  date: string;
-  isHighlight?: boolean;
-}
+type TrackingApiSuccess = {
+  success: true;
+  message: string;
+  data: {
+    quoteReference: string;
+    pickupAddress: string;
+    deliveryAddress: string;
+    pickupDate: string; // yyyy-mm-dd
+    shipmentStatus: string;
+    deliveryStatus: string;
+    transitProgress: string;
+    createdAt: string; // yyyy-mm-dd
+    updatedAt: string; // yyyy-mm-dd
+  };
+  timestamp: string;
+};
+
+type TrackingApiNotFound = {
+  success: false;
+  message: string;
+  data: null;
+  timestamp: string;
+};
+
+type TrackingApiResponse = TrackingApiSuccess | TrackingApiNotFound;
 
 const TrackShipmentResult: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // TODO: Fetch actual tracking data from API using location.state.bookingId
-  // Mock data for demonstration
-  const trackingData = {
-    pickupLocation: "2715 Ash Dr. San Jose, South Dakota 83475",
-    deliveryLocation: "2464 Royal Ln. Mesa, New Jersey 45463",
-    bookingId: "#1034567",
-    dueDate: "27/12/2025",
-    trackingHistory: [
-      {
-        status: "Shipment Delivered",
-        description: "",
-        time: "2:45PM",
-        date: "16/12/2025",
-        isHighlight: true,
-      },
-      {
-        status: "Delivered to Customer Location",
-        description: "",
-        time: "",
-        date: "16/12/2025",
-        isHighlight: false,
-      },
-      {
-        status: "Shipment In Transit",
-        description: "",
-        time: "10:15AM",
-        date: "16/12/2025",
-        isHighlight: true,
-      },
-      {
-        status: "Departed from Service Center South Dakota",
-        description: "",
-        time: "",
-        date: "16/12/2025",
-        isHighlight: false,
-      },
-      {
-        status: "Shipment Created",
-        description: "",
-        time: "8:22AM",
-        date: "16/12/2025",
-        isHighlight: true,
-      },
-      {
-        status: "Shipment Created At Service Center South Dakota",
-        description: "",
-        time: "",
-        date: "16/12/2025",
-        isHighlight: false,
-      },
-    ] as TrackingEvent[],
-  };
+  // ✅ get token from auth context
+  const { token } = useAuth() as any;
+
+  const rawQuoteReference: string | undefined = (location.state as any)?.quoteReference;
+  const quoteReference = (rawQuoteReference || "").trim();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [apiData, setApiData] = useState<TrackingApiSuccess["data"] | null>(null);
+  const [apiMessage, setApiMessage] = useState<string>("");
+  const [apiTimestamp, setApiTimestamp] = useState<string>("");
+
+  useEffect(() => {
+    const run = async () => {
+      if (!quoteReference) {
+        setErrorMsg("Quote reference is missing.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!token) {
+        setErrorMsg("You must be logged in to track a shipment.");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setErrorMsg(null);
+      setApiMessage("");
+      setApiTimestamp("");
+      setApiData(null);
+
+      try {
+        const url = `https://synergy-x-transportation-backend.onrender.com/api/v1/tracking/status?quoteReference=${encodeURIComponent(
+          quoteReference
+        )}`;
+
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        });
+
+        // ✅ always try to read response body (success OR error)
+        const json = await res.json().catch(() => null);
+
+        // Helpful debug: open console and you’ll see exactly what backend returned
+        console.log("TRACKING RESPONSE:", res.status, json);
+
+        const messageFromServer =
+          (json && (json.message || json.error)) ||
+          (res.ok ? "Tracking information retrieved successfully" : `Request failed (${res.status})`);
+
+        setApiMessage(messageFromServer);
+        setApiTimestamp((json && json.timestamp) || "");
+
+        if (res.ok && json?.success && json?.data) {
+          setApiData(json.data);
+        } else {
+          // for 400/401/403/404 etc
+          setApiData(null);
+          if (!res.ok) setErrorMsg(messageFromServer);
+        }
+      } catch (err) {
+        setErrorMsg("Unable to retrieve tracking information. Please try again.");
+        setApiData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    run();
+  }, [quoteReference, token]);
+
+  const display = useMemo(() => {
+    const formatDate = (yyyyMmDd?: string) => {
+      if (!yyyyMmDd) return "—";
+      const parts = yyyyMmDd.split("-");
+      if (parts.length !== 3) return yyyyMmDd;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    };
+
+    const formatTimestamp = (iso?: string) => {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleString();
+    };
+
+    return {
+      quoteReference: apiData?.quoteReference || quoteReference || "—",
+      pickupAddress: apiData?.pickupAddress || "—",
+      deliveryAddress: apiData?.deliveryAddress || "—",
+      pickupDate: formatDate(apiData?.pickupDate),
+      shipmentStatus: apiData?.shipmentStatus || "—",
+      deliveryStatus: apiData?.deliveryStatus || "—",
+      transitProgress: apiData?.transitProgress || "—",
+      createdAt: formatDate(apiData?.createdAt),
+      updatedAt: formatDate(apiData?.updatedAt),
+      message: errorMsg || apiMessage || "—",
+      timestamp: formatTimestamp(apiTimestamp),
+    };
+  }, [apiData, quoteReference, apiMessage, errorMsg, apiTimestamp]);
 
   const handleClose = () => {
     navigate("/track-shipment");
@@ -78,27 +151,13 @@ const TrackShipmentResult: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
 
-      {/* Hero Section with Modal Overlay */}
-      <div className="relative">
-        {/* Background Image */}
-        <div
-          className="w-full h-[600px] bg-cover bg-center"
-          style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1494412651409-8963ce7935a7?w=1920&q=80')`,
-          }}
-        >
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
+      <div className="flex-1 px-4 py-10 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-sm font-medium text-gray-700 mb-4">
+            Shipment tracking info
+          </div>
 
-        {/* Shipment tracking info label */}
-        <div className="absolute top-4 left-4 text-white text-sm font-medium">
-          Shipment tracking info
-        </div>
-
-        {/* Result Modal Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center px-4">
-          <Card className="w-full max-w-lg bg-white shadow-xl border-0 relative">
-            {/* Close Button */}
+          <Card className="w-full bg-white shadow-xl border-0 relative">
             <button
               onClick={handleClose}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
@@ -116,153 +175,116 @@ const TrackShipmentResult: React.FC = () => {
                 <h3 className="text-sm font-medium text-gray-700 mb-3">
                   Delivery Address
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Pickup Location */}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-[#E8F5E9] rounded-lg p-4">
                     <p className="text-xs font-medium text-gray-600 mb-2">
-                      Pickup Location
+                      Pickup Address
                     </p>
                     <p className="text-sm text-gray-900">
-                      {trackingData.pickupLocation}
+                      {isLoading ? "Loading..." : display.pickupAddress}
                     </p>
                   </div>
-                  {/* Delivery Location */}
+
                   <div className="bg-[#E3F2FD] rounded-lg p-4">
                     <p className="text-xs font-medium text-gray-600 mb-2">
-                      Delivery Location
+                      Delivery Address
                     </p>
                     <p className="text-sm text-gray-900">
-                      {trackingData.deliveryLocation}
+                      {isLoading ? "Loading..." : display.deliveryAddress}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Booking ID and Due Date */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              {/* Quote Reference + Pickup Date */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">
-                    Booking ID
+                    Quote Reference
                   </p>
                   <p className="text-sm font-semibold text-gray-900">
-                    {trackingData.bookingId}
+                    {isLoading ? "Loading..." : display.quoteReference}
                   </p>
                 </div>
+
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">
-                    Due Date
+                    Pickup Date
                   </p>
                   <p className="text-sm font-semibold text-gray-900">
-                    {trackingData.dueDate}
+                    {isLoading ? "Loading..." : display.pickupDate}
                   </p>
                 </div>
               </div>
 
-              {/* Tracking History */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-4">
-                  Tracking History
-                </h3>
-                <div className="relative">
-                  {/* Timeline line */}
-                  <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-gray-200" />
+              {/* Shipment Status + Delivery Status */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">
+                    Shipment Status
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {isLoading ? "Loading..." : display.shipmentStatus}
+                  </p>
+                </div>
 
-                  <div className="space-y-4">
-                    {trackingData.trackingHistory.map((event, index) => (
-                      <div key={index} className="flex items-start gap-4">
-                        {/* Timeline dot */}
-                        <div
-                          className={`relative z-10 w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                            event.isHighlight
-                              ? "bg-[#FF6B35] border-[#FF6B35]"
-                              : "bg-white border-gray-300"
-                          }`}
-                        />
-                        {/* Event content */}
-                        <div className="flex-1 flex justify-between items-start">
-                          <p
-                            className={`text-sm ${
-                              event.isHighlight
-                                ? "font-medium text-gray-900"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            {event.status}
-                          </p>
-                          <div className="text-right text-xs text-gray-500 whitespace-nowrap ml-4">
-                            {event.time && <p>{event.time}</p>}
-                            <p>{event.date}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">
+                    Delivery Status
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {isLoading ? "Loading..." : display.deliveryStatus}
+                  </p>
+                </div>
+              </div>
+
+              {/* Transit Progress */}
+              <div className="mb-6">
+                <p className="text-xs font-medium text-gray-500 mb-1">
+                  Transit Progress
+                </p>
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="text-sm text-gray-900">
+                    {isLoading ? "Loading..." : display.transitProgress}
+                  </p>
+                </div>
+              </div>
+
+              {/* Created At + Updated At */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">
+                    Created At
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {isLoading ? "Loading..." : display.createdAt}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">
+                    Updated At
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {isLoading ? "Loading..." : display.updatedAt}
+                  </p>
+                </div>
+              </div>
+
+              {/* Message + Timestamp */}
+              <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <p className="text-sm text-gray-700">
+                    {isLoading ? "Loading..." : display.message}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {isLoading ? "" : `Timestamp: ${display.timestamp}`}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
-
-      {/* Services We Offer Section */}
-      <div className="py-16 px-4 bg-white">
-        <h2 className="text-2xl font-semibold text-center text-gray-900 mb-10">
-          Services We Offer
-        </h2>
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Open Auto Transport */}
-          <div className="rounded-lg overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80"
-              alt="Open Auto Transport"
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Open Auto Transport
-              </h3>
-              <p className="text-sm text-gray-500">
-                The most affordable option for standard cars, using open-air
-                trailers to transport multiple vehicles.
-              </p>
-            </div>
-          </div>
-
-          {/* Door-to-Door Auto Transport */}
-          <div className="rounded-lg overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=400&q=80"
-              alt="Door-to-Door Auto Transport"
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Door-to-Door Auto Transport
-              </h3>
-              <p className="text-sm text-gray-500">
-                Convenient pickup and delivery directly to your specified
-                locations.
-              </p>
-            </div>
-          </div>
-
-          {/* Enclosed Auto Transport */}
-          <div className="rounded-lg overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400&q=80"
-              alt="Enclosed Auto Transport"
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Enclosed Auto Transport
-              </h3>
-              <p className="text-sm text-gray-500">
-                Premium protection for luxury, classic, or high-value vehicles
-                in enclosed trailers.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 

@@ -43,7 +43,7 @@ const Profile = () => {
     { path: "/profile", label: "Overview" },
     { path: "/profile/reservations", label: "Reservations" },
     { path: "/profile/review", label: "Review" },
-    { path: "/profile/track-shipment", label: "Track Shipment" },
+    { path: "/track-shipment", label: "Track Shipment" },
   ];
 
   return (

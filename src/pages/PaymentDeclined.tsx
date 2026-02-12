@@ -9,7 +9,7 @@ const PaymentDeclined: React.FC = () => {
   const navigate = useNavigate();
 
   const handleTryAgain = () => {
-    navigate("/quote-step-4");
+    navigate("/profile");
   };
 
   return (

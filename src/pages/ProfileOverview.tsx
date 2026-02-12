@@ -33,7 +33,6 @@ const formatMoney = (value?: number) => {
 const pickDate = (r: any) =>
   r?.reservationDate || r?.pickupDate || r?.deliveryDate || r?.createdAt || "-";
 
-// ✅ Extract stats no matter which backend shape comes back
 const extractDashboardStats = (json: any): DashboardStats => {
   const maybe =
     json?.data?.data ||

@@ -34,6 +34,8 @@ import PaymentDeclined from "./pages/PaymentDeclined";
 import PaymentProcessing from "./pages/PaymentProcessing";
 import HowCalculatorWorks from "./components/HowCalculatorWorks";
 import ScrollToHash from "./components/ScrollToHash";
+import TrackShipment from "./pages/TrackShipment";
+import TrackShipmentResult from "./pages/TrackShipmentResult";
 
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -81,6 +83,9 @@ const App = () => (
             <Route path="/payment-processing" element={<PaymentProcessing />} />
             <Route path="/payment-successful" element={<PaymentSuccessful />} />
             <Route path="/payment-declined" element={<PaymentDeclined />} />
+
+            <Route path="/track-shipment" element={<TrackShipment />} />
+            <Route path="/track-shipment-result" element={<TrackShipmentResult />} />
 
 
 
