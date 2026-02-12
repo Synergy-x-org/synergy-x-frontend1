@@ -271,7 +271,7 @@ const [isDateFocused, setIsDateFocused] = useState(false);
           min={today}
           onFocus={(e) => {
             setIsDateFocused(true);
-            e.target.showPicker && e.target.showPicker(); // opens calendar immediately (Chrome)
+            e.target.showPicker && e.target.showPicker(); 
           }}
           onBlur={() => {
             if (!formData.pickupDate) {
