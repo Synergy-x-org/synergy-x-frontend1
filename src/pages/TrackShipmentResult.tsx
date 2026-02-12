@@ -151,7 +151,7 @@ const TrackShipmentResult: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
 
-<div className="flex-1 px-4 pt-27 pb-10 bg-white">
+<div className="flex-1 px-4 pt-24 pb-10 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-sm font-medium text-gray-700 mb-4">
             Shipment tracking info
