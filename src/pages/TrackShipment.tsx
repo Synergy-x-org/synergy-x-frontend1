@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Hash } from "lucide-react";
+import ServicesWeOffer from "@/components/ServicesWeOffer";
 
 const TrackShipment: React.FC = () => {
   const navigate = useNavigate();
@@ -95,67 +96,7 @@ const TrackShipment: React.FC = () => {
         </div>
       </div>
 
-      {/* Services We Offer Section */}
-      <div className="py-16 px-4 bg-white">
-        <h2 className="text-2xl font-semibold text-center text-gray-900 mb-10">
-          Services We Offer
-        </h2>
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Open Auto Transport */}
-          <div className="rounded-lg overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80"
-              alt="Open Auto Transport"
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Open Auto Transport
-              </h3>
-              <p className="text-sm text-gray-500">
-                The most affordable option for standard cars, using open-air
-                trailers to transport multiple vehicles.
-              </p>
-            </div>
-          </div>
-
-          {/* Door-to-Door Auto Transport */}
-          <div className="rounded-lg overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=400&q=80"
-              alt="Door-to-Door Auto Transport"
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Door-to-Door Auto Transport
-              </h3>
-              <p className="text-sm text-gray-500">
-                Convenient pickup and delivery directly to your specified
-                locations.
-              </p>
-            </div>
-          </div>
-
-          {/* Enclosed Auto Transport */}
-          <div className="rounded-lg overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400&q=80"
-              alt="Enclosed Auto Transport"
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Enclosed Auto Transport
-              </h3>
-              <p className="text-sm text-gray-500">
-                Premium protection for luxury, classic, or high-value vehicles
-                in enclosed trailers.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ServicesWeOffer />
 
       <Footer />
     </div>
