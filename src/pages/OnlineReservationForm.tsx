@@ -698,7 +698,7 @@ const OnlineReservationForm: React.FC = () => {
             </div>
 
             <div className="border border-t-0 rounded-b-lg p-4 mb-6">
-              <div className="flex items-center gap-2 mb-4">
+              {/* <div className="flex items-center gap-2 mb-4">
                 <Checkbox
                   id="pickupSame"
                   checked={pickupSameAsPrimary}
@@ -707,7 +707,7 @@ const OnlineReservationForm: React.FC = () => {
                 <label htmlFor="pickupSame" className="text-sm text-gray-600">
                   Pickup contact same as primary contact
                 </label>
-              </div>
+              </div> */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
@@ -812,7 +812,7 @@ const OnlineReservationForm: React.FC = () => {
             </div>
 
             <div className="border border-t-0 rounded-b-lg p-4 mb-6">
-              <div className="flex items-center gap-2 mb-4">
+              {/* <div className="flex items-center gap-2 mb-4">
                 <Checkbox
                   id="deliverySame"
                   checked={deliverySameAsPrimary}
@@ -821,7 +821,7 @@ const OnlineReservationForm: React.FC = () => {
                 <label htmlFor="deliverySame" className="text-sm text-gray-600">
                   Delivery contact same as primary contact
                 </label>
-              </div>
+              </div> */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
