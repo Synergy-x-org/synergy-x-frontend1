@@ -38,6 +38,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ initialData, onSubmit }) => {
     phoneNumber: initialData?.phoneNumber || "",
   });
 
+  const today = new Date().toISOString().split("T")[0];
+
+const [isDateFocused, setIsDateFocused] = useState(false);
+
+
   // --- Fetch car brands ---
   useEffect(() => {
     const fetchBrands = async () => {
@@ -260,11 +265,25 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ initialData, onSubmit }) => {
 
         {/* Other inputs */}
         <Input
-          type="date"
+          type={isDateFocused ? "date" : "text"}
+          placeholder="Pickup Date"
           value={formData.pickupDate}
-          onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
+          min={today}
+          onFocus={(e) => {
+            setIsDateFocused(true);
+            e.target.showPicker && e.target.showPicker(); // opens calendar immediately (Chrome)
+          }}
+          onBlur={() => {
+            if (!formData.pickupDate) {
+              setIsDateFocused(false);
+            }
+          }}
+          onChange={(e) =>
+            setFormData({ ...formData, pickupDate: e.target.value })
+          }
           required
         />
+
 
         <Input
           type="email"
