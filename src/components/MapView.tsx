@@ -227,6 +227,133 @@
 
 // export default MapView;
 
+// import React, { useEffect, useMemo, useState } from "react";
+// import { getDirections } from "@/services/mapService";
+
+// interface Props {
+//   initialOrigin: string;
+//   initialDestination: string;
+//   onDistanceChange?: (distance: string) => void;
+//   onDurationChange?: (duration: string) => void;
+// }
+
+// function buildGoogleMapsUrl(origin: string, destination: string) {
+//   const o = encodeURIComponent(origin || "");
+//   const d = encodeURIComponent(destination || "");
+//   return `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}`;
+// }
+
+// export default function MapView({
+//   initialOrigin,
+//   initialDestination,
+//   onDistanceChange,
+//   onDurationChange,
+// }: Props) {
+//   const [mapUrl, setMapUrl] = useState("");
+//   const [error, setError] = useState<string | null>(null);
+//   const [loading, setLoading] = useState(false);
+
+//   const fallbackUrl = useMemo(() => {
+//     // fallback always works even if backend fails
+//     return buildGoogleMapsUrl(initialOrigin, initialDestination);
+//   }, [initialOrigin, initialDestination]);
+
+//   useEffect(() => {
+//     let cancelled = false;
+
+//     const load = async () => {
+//       // If missing values, don’t call API
+//       if (!initialOrigin?.trim() || !initialDestination?.trim()) {
+//         setMapUrl("");
+//         setError(null);
+//         setLoading(false);
+//         return;
+//       }
+
+//       try {
+//         setLoading(true);
+//         setError(null);
+
+//         const data = await getDirections(initialOrigin, initialDestination);
+
+//         if (cancelled) return;
+
+//         // If API didn’t return mapUrl, use fallback
+//         const safeUrl = data.mapUrl?.trim() ? data.mapUrl : fallbackUrl;
+//         setMapUrl(safeUrl);
+
+//         // ✅ Ensure distance updates when available
+//         if (data.distance?.trim()) onDistanceChange?.(data.distance);
+
+//         // Optional duration callback
+//         if (data.duration?.trim()) onDurationChange?.(data.duration);
+//       } catch (e: any) {
+//         if (cancelled) return;
+
+//         // ✅ Better error message extraction
+//         const msg =
+//           e?.response?.data?.message ||
+//           e?.message ||
+//           "Failed to load map route. Try a more specific pickup/delivery location.";
+
+//         setError(msg);
+
+//         // Still give the user a working map link
+//         setMapUrl(fallbackUrl);
+//       } finally {
+//         if (!cancelled) setLoading(false);
+//       }
+//     };
+
+//     load();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, [
+//     initialOrigin,
+//     initialDestination,
+//     fallbackUrl,
+//     onDistanceChange,
+//     onDurationChange,
+//   ]);
+
+//   if (loading) {
+//     return (
+//       <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
+//         Loading route...
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6">
+//       {error ? (
+//         <div className="text-sm text-red-600 text-center max-w-md">
+//           {error}
+//           <div className="text-xs text-muted-foreground mt-2">
+//             Tip: Use suggestions from autocomplete (e.g. “Benin City, Edo,
+//             Nigeria”) instead of only a state name.
+//           </div>
+//         </div>
+//       ) : (
+//         <div className="text-sm text-muted-foreground text-center max-w-md">
+//           Click below to view the route on Google Maps.
+//         </div>
+//       )}
+
+//       <a
+//         href={mapUrl || fallbackUrl}
+//         target="_blank"
+//         rel="noopener noreferrer"
+//         className="px-5 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition"
+//       >
+//         View Route on Google Maps
+//       </a>
+//     </div>
+//   );
+// }
+
+
 import React, { useEffect, useMemo, useState } from "react";
 import { getDirections } from "@/services/mapService";
 
@@ -243,6 +370,14 @@ function buildGoogleMapsUrl(origin: string, destination: string) {
   return `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}`;
 }
 
+function normalizeTextField(val: any): string {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val?.text === "string") return val.text;
+  if (typeof val?.value === "number") return String(val.value);
+  return "";
+}
+
 export default function MapView({
   initialOrigin,
   initialDestination,
@@ -254,7 +389,6 @@ export default function MapView({
   const [loading, setLoading] = useState(false);
 
   const fallbackUrl = useMemo(() => {
-    // fallback always works even if backend fails
     return buildGoogleMapsUrl(initialOrigin, initialDestination);
   }, [initialOrigin, initialDestination]);
 
@@ -262,7 +396,6 @@ export default function MapView({
     let cancelled = false;
 
     const load = async () => {
-      // If missing values, don’t call API
       if (!initialOrigin?.trim() || !initialDestination?.trim()) {
         setMapUrl("");
         setError(null);
@@ -274,31 +407,38 @@ export default function MapView({
         setLoading(true);
         setError(null);
 
-        const data = await getDirections(initialOrigin, initialDestination);
-
+        const raw = await getDirections(initialOrigin, initialDestination);
         if (cancelled) return;
 
-        // If API didn’t return mapUrl, use fallback
-        const safeUrl = data.mapUrl?.trim() ? data.mapUrl : fallbackUrl;
+        const data: any = (raw as any)?.data ?? raw;
+
+        const safeUrl =
+          typeof data?.mapUrl === "string" && data.mapUrl.trim()
+            ? data.mapUrl
+            : fallbackUrl;
+
         setMapUrl(safeUrl);
 
-        // ✅ Ensure distance updates when available
-        if (data.distance?.trim()) onDistanceChange?.(data.distance);
+        const distance = normalizeTextField(data?.distance);
+        if (distance.trim()) onDistanceChange?.(distance);
 
-        // Optional duration callback
-        if (data.duration?.trim()) onDurationChange?.(data.duration);
+        const duration = normalizeTextField(data?.duration);
+        if (duration.trim()) onDurationChange?.(duration);
       } catch (e: any) {
         if (cancelled) return;
 
-        // ✅ Better error message extraction
         const msg =
           e?.response?.data?.message ||
           e?.message ||
-          "Failed to load map route. Try a more specific pickup/delivery location.";
+          "An unexpected error occurred. Please try again later.";
 
         setError(msg);
 
-        // Still give the user a working map link
+        // ✅ IMPORTANT: set fallback values so distance doesn’t stay blank
+        onDistanceChange?.("N/A");
+        onDurationChange?.("N/A");
+
+        // Still give a working map link
         setMapUrl(fallbackUrl);
       } finally {
         if (!cancelled) setLoading(false);
@@ -331,8 +471,8 @@ export default function MapView({
         <div className="text-sm text-red-600 text-center max-w-md">
           {error}
           <div className="text-xs text-muted-foreground mt-2">
-            Tip: Use suggestions from autocomplete (e.g. “Benin City, Edo,
-            Nigeria”) instead of only a state name.
+            Tip: Use suggestions from autocomplete (e.g. “Benin City, Edo, Nigeria”)
+            instead of only a state name.
           </div>
         </div>
       ) : (
@@ -352,3 +492,4 @@ export default function MapView({
     </div>
   );
 }
+

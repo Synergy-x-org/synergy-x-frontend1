@@ -14,6 +14,56 @@
 
 
 
+// import axios from "axios";
+
+// const BASE_URL = "https://synergy-x-transportation-backend.onrender.com/api/v1";
+
+// /* ----------------------------------
+//    AUTOCOMPLETE
+// ----------------------------------- */
+// export const getAutocomplete = async (input: string) => {
+//   const res = await fetch(
+//     `${BASE_URL}/maps/autocomplete?input=${encodeURIComponent(input)}`
+//   );
+
+//   if (!res.ok) {
+//     const errorText = await res.text();
+//     throw new Error(
+//       `Failed to fetch location suggestions: ${res.status} ${res.statusText}. Response: ${errorText}`
+//     );
+//   }
+
+//   return res.json();
+// };
+
+// /* ----------------------------------
+//    DIRECTIONS
+// ----------------------------------- */
+
+// export type DirectionsResponse = {
+//   distance: string;
+//   duration: string;
+//   mapUrl: string;
+// };
+
+// export const getDirections = async (
+//   origin: string,
+//   destination: string
+// ): Promise<DirectionsResponse> => {
+//   const res = await axios.get<DirectionsResponse>(`${BASE_URL}/maps/directions`, {
+//     params: { origin, destination },
+//   });
+
+//   return res.data;
+// };
+
+
+
+
+
+
+
+
 import axios from "axios";
 
 const BASE_URL = "https://synergy-x-transportation-backend.onrender.com/api/v1";
@@ -41,29 +91,22 @@ export const getAutocomplete = async (input: string) => {
 ----------------------------------- */
 
 export type DirectionsResponse = {
-  distance: string;
-  duration: string;
+  distance: any; // ✅ backend may return string OR { text, value }
+  duration: any; // ✅ backend may return string OR { text, value }
   mapUrl: string;
+  data?: any; // ✅ some backends wrap response in `data`
 };
 
 export const getDirections = async (
   origin: string,
   destination: string
 ): Promise<DirectionsResponse> => {
-  const res = await axios.get<DirectionsResponse>(`${BASE_URL}/maps/directions`, {
+  const res = await axios.get(`${BASE_URL}/maps/directions`, {
     params: { origin, destination },
   });
 
-  return res.data;
+  return res.data as DirectionsResponse;
 };
-
-
-
-
-
-
-
-
 
 
 

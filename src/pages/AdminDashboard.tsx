@@ -140,14 +140,16 @@ const AdminDashboard = () => {
     );
   };
 
-  const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, hasSubmenu: true },
-    { name: "Users", icon: Users, hasSubmenu: true },
-    { name: "Reservations", icon: Calendar, hasSubmenu: true },
-    { name: "Shipment Status", icon: Truck, hasSubmenu: true },
-    { name: "Dispatch", icon: Package, hasSubmenu: true },
-    { name: "Chats", icon: MessageSquare, hasSubmenu: true },
-  ];
+
+const menuItems = [
+  { name: "Dashboard", icon: LayoutDashboard, path: "/admin" },
+  { name: "Users", icon: Users, path: "/admin/users" },
+  { name: "Reservations", icon: Calendar, path: "/admin/reservations" },
+  { name: "Update Shipment", icon: Truck, path: "/admin/update-shipment" },
+  { name: "Dispatch", icon: Package, path: "/admin/dispatch" },
+  { name: "Chats", icon: MessageSquare, path: "/admin/chats" },
+];
+
 
   const getStatusColor = (status: string) => {
     const s = String(status || "").toUpperCase();
@@ -161,6 +163,7 @@ const AdminDashboard = () => {
   const tableRows = useMemo(() => {
     return reservations.map((r, idx) => ({
       id: r.reservationId || String(idx),
+      bookingId: r.reservationId || "-", // ✅ NEW
       vehicleModel: r.vehicle || "-",
       vehicleImage: "🚗",
       location: r.pickupAddress || "-",
@@ -189,33 +192,25 @@ const AdminDashboard = () => {
         </div>
 
         <nav className="flex-1 p-4">
-          <ul className="space-y-1">
-            {menuItems.map((item) => (
-              <li key={item.name}>
-                <button
-                  onClick={() => toggleMenu(item.name)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                    item.name === "Dashboard"
-                      ? "text-primary bg-orange-50"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.name}</span>
-                  </div>
-                  {item.hasSubmenu && (
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${
-                        expandedMenus.includes(item.name) ? "rotate-180" : ""
-                      }`}
-                    />
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+  <ul className="space-y-1">
+    {menuItems.map((item) => (
+      <li key={item.name}>
+        <button
+          onClick={() => navigate(item.path)}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+            item.name === "Dashboard"
+              ? "text-primary bg-orange-50"
+              : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <item.icon className="w-5 h-5" />
+          <span>{item.name}</span>
+        </button>
+      </li>
+    ))}
+  </ul>
+</nav>
+
 
         <div className="p-4 border-t border-gray-100">
           <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
@@ -450,6 +445,7 @@ const AdminDashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="border-b border-gray-100">
+                      <TableHead className="text-gray-500 font-medium">Booking ID</TableHead> {/* ✅ NEW */}
                     <TableHead className="text-gray-500 font-medium">
                       Vehicle Model
                     </TableHead>
@@ -474,41 +470,33 @@ const AdminDashboard = () => {
                 <TableBody>
                   {tableRows.map((row) => (
                     <TableRow key={row.id} className="border-b border-gray-50">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-lg">
-                            {row.vehicleImage}
-                          </div>
-                          <span className="text-gray-900">
-                            {row.vehicleModel}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-gray-600">
-                        {row.location}
-                      </TableCell>
-                      <TableCell className="text-gray-600">
-                        {row.destination}
-                      </TableCell>
-                      <TableCell className="text-gray-600">{row.date}</TableCell>
-                      <TableCell className="text-gray-900 font-medium">
-                        {row.amount}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs text-white ${getStatusColor(
-                            row.status
-                          )}`}
-                        >
-                          {String(row.status || "")
-                            .charAt(0)
-                            .toUpperCase() +
-                            String(row.status || "")
-                              .slice(1)
-                              .toLowerCase()}
-                        </span>
-                      </TableCell>
-                    </TableRow>
+  <TableCell className="text-gray-600 font-medium">
+    {row.bookingId}
+  </TableCell>
+
+  <TableCell>
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-lg">
+        {row.vehicleImage}
+      </div>
+      <span className="text-gray-900">{row.vehicleModel}</span>
+    </div>
+  </TableCell>
+
+  <TableCell className="text-gray-600">{row.location}</TableCell>
+  <TableCell className="text-gray-600">{row.destination}</TableCell>
+  <TableCell className="text-gray-600">{row.date}</TableCell>
+  <TableCell className="text-gray-900 font-medium">{row.amount}</TableCell>
+  <TableCell>
+    <span
+      className={`px-3 py-1 rounded-full text-xs text-white ${getStatusColor(row.status)}`}
+    >
+      {String(row.status || "").charAt(0).toUpperCase() +
+        String(row.status || "").slice(1).toLowerCase()}
+    </span>
+  </TableCell>
+</TableRow>
+
                   ))}
 
                   {loading && tableRows.length === 0 ? null : null}

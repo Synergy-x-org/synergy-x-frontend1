@@ -36,6 +36,8 @@ import HowCalculatorWorks from "./components/HowCalculatorWorks";
 import ScrollToHash from "./components/ScrollToHash";
 import TrackShipment from "./pages/TrackShipment";
 import TrackShipmentResult from "./pages/TrackShipmentResult";
+import AdminUpdateShipment from "./pages/AdminUpdateShipment";
+import AdminUpdateShipmentResult from "./pages/AdminUpdateShipmentResult";
 
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -86,6 +88,11 @@ const App = () => (
 
             <Route path="/track-shipment" element={<TrackShipment />} />
             <Route path="/track-shipment-result" element={<TrackShipmentResult />} />
+
+            <Route path="/admin/update-shipment" element={<AdminUpdateShipment />} />
+            <Route path="/admin/update-shipment-result" element={<AdminUpdateShipmentResult />} />
+
+            
 
 
 
