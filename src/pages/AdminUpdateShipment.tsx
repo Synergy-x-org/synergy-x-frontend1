@@ -88,7 +88,7 @@ const AdminUpdateShipment: React.FC = () => {
 
     try {
       const res = await fetch(
-        "https://synergy-x-transportation-backend.onrender.com/api/v1/tracking/admin/update-progress",
+        "https://synergy-x-transportation-backend.onrender.com/api/v1/admin/update-progress",
         {
           method: "PATCH",
           headers: {
