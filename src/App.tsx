@@ -38,6 +38,7 @@ import TrackShipment from "./pages/TrackShipment";
 import TrackShipmentResult from "./pages/TrackShipmentResult";
 import AdminUpdateShipment from "./pages/AdminUpdateShipment";
 import AdminUpdateShipmentResult from "./pages/AdminUpdateShipmentResult";
+import ProfileSettings from "./pages/ProfileSettings";
 
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/online-reservation" element={<OnlineReservationForm />} />
             <Route path="/payment-protection" element={<PaymentProtection />} />
             <Route path="/profile/reservations" element={<ProfileReservation />} />
+            <Route path="/profile/settings" element={<ProfileSettings />} />
             <Route path="/reservation-payment" element={<ReservationPayment />} />
 
             <Route path="/payment-processing" element={<PaymentProcessing />} />
