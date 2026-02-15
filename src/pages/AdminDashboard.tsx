@@ -163,7 +163,7 @@ const menuItems = [
   const tableRows = useMemo(() => {
     return reservations.map((r, idx) => ({
       id: r.reservationId || String(idx),
-      bookingId: r.reservationId || "-", // ✅ NEW
+      bookingId: r.quoteReference || "-", // ✅ NEW
       vehicleModel: r.vehicle || "-",
       vehicleImage: "🚗",
       location: r.pickupAddress || "-",
