@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+
 
 // ✅ use your existing autocomplete function
 import { getAutocomplete } from "@/services/mapService";
@@ -165,6 +167,8 @@ const ProfileSettings = () => {
       }
     }
   };
+  const navigate = useNavigate();
+
 
   const selectSuggestion = (which: "current" | "permanent" | "city", label: string) => {
     if (which === "current") {
@@ -304,9 +308,19 @@ const ProfileSettings = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Settings</CardTitle>
-      </CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+  <CardTitle>Settings</CardTitle>
+
+  <Button
+    type="button"
+    variant="outline"
+    onClick={() => navigate("/profile")}
+    className="shrink-0"
+  >
+    Back to Profile
+  </Button>
+</CardHeader>
+
 
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
