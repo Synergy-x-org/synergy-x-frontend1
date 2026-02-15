@@ -39,7 +39,14 @@ const AdminUpdateShipmentResult: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const result: ApiResponse | undefined = (location.state as any)?.result;
+  // const result: ApiResponse | undefined = (location.state as any)?.result;
+
+  const result = (location.state as any)?.result; // what you already pass
+const d = result?.data;
+
+const pickupDateLabel =
+  d?.pickupDate ? new Date(d.pickupDate).toLocaleDateString("en-GB") : "—";
+
 
   const isSuccess = !!result && result.success === true;
 
@@ -57,7 +64,7 @@ const AdminUpdateShipmentResult: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
 
-      <div className="flex-1 bg-gray-50 px-4 py-10">
+<div className="flex-1 px-4 pt-32 pb-10 bg-white">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between gap-3 mb-6">
             <h1 className="text-2xl font-semibold text-gray-900">
@@ -137,8 +144,9 @@ const AdminUpdateShipmentResult: React.FC = () => {
                         Pickup Date
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
-                        {data.pickupDate || "—"}
-                      </p>
+  {pickupDateLabel}
+</p>
+
                     </div>
 
                     <div>
