@@ -54,6 +54,23 @@ const chartData = [
   { name: "Dec", value: 65 },
 ];
 
+const monthOptions = [
+  "ALL",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+
 const AdminDashboard = () => {
 
   const todayLabel = useMemo(() => {
@@ -78,6 +95,12 @@ const AdminDashboard = () => {
   const { token, user, logout } = useAuth() as any;
 
   
+
+// const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
+
+const [selectedMonth, setSelectedMonth] =useState<string>(
+  new Date().toLocaleString("en-GB", { month: "long" })
+);
 
 
 
@@ -160,20 +183,45 @@ const menuItems = [
     return "bg-gray-500";
   };
 
+  // const tableRows = useMemo(() => {
+  //   return reservations.map((r, idx) => ({
+  //     id: r.reservationId || String(idx),
+  //     bookingId: r.quoteReference || "-", // ✅ NEW
+  //     vehicleModel: r.vehicle || "-",
+  //     vehicleImage: "🚗",
+  //     location: r.pickupAddress || "-",
+  //     destination: r.deliveryAddress || "-",
+  //     date: r.reservationDate || "-",
+  //     amount:
+  //       typeof r.price === "number" ? `$ ${r.price.toLocaleString()}` : "-",
+  //     status: r.status || "-",
+  //   }));
+  // }, [reservations]);
+
   const tableRows = useMemo(() => {
-    return reservations.map((r, idx) => ({
-      id: r.reservationId || String(idx),
-      bookingId: r.quoteReference || "-", // ✅ NEW
-      vehicleModel: r.vehicle || "-",
-      vehicleImage: "🚗",
-      location: r.pickupAddress || "-",
-      destination: r.deliveryAddress || "-",
-      date: r.reservationDate || "-",
-      amount:
-        typeof r.price === "number" ? `$ ${r.price.toLocaleString()}` : "-",
-      status: r.status || "-",
-    }));
-  }, [reservations]);
+  const filtered = selectedMonth === "ALL"
+    ? reservations
+    : reservations.filter((r) => {
+        if (!r.reservationDate) return false;
+        const date = new Date(r.reservationDate);
+        const monthName = date.toLocaleString("en-GB", { month: "long" });
+        return monthName === selectedMonth;
+      });
+
+  return filtered.map((r, idx) => ({
+    id: r.reservationId || String(idx),
+    bookingId: r.reservationId || "-",
+    vehicleModel: r.vehicle || "-",
+    vehicleImage: "🚗",
+    location: r.pickupAddress || "-",
+    destination: r.deliveryAddress || "-",
+    date: r.reservationDate || "-",
+    amount:
+      typeof r.price === "number" ? `$ ${r.price.toLocaleString()}` : "-",
+    status: r.status || "-",
+  }));
+}, [reservations, selectedMonth]);
+
 
   const navigate = useNavigate();
 
@@ -384,10 +432,18 @@ const menuItems = [
                 <h2 className="text-lg font-semibold text-gray-900">
                   Shipment Details
                 </h2>
-                {/* <button className="flex items-center gap-2 text-sm text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5">
-                  October
-                  <ChevronDown className="w-4 h-4" />
-                </button> */}
+                <select
+  value={selectedMonth}
+  onChange={(e) => setSelectedMonth(e.target.value)}
+  className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none"
+>
+  {monthOptions.map((month) => (
+    <option key={month} value={month}>
+      {month}
+    </option>
+  ))}
+</select>
+
               </div>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
