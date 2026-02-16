@@ -258,6 +258,10 @@ const TrackShipmentResult: React.FC = () => {
   }, [apiData, quoteReference, apiMessage, errorMsg, apiTimestamp]);
 
   const handleClose = () => navigate("/track-shipment");
+  const handleBackToProfile = () => {
+  navigate("/profile"); // change this route if your profile route is different
+};
+
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -283,6 +287,17 @@ const TrackShipmentResult: React.FC = () => {
               <h2 className="text-lg font-semibold text-center text-gray-900 mb-6">
                 Track shipment
               </h2>
+
+                {/* Back to Profile Button */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={handleBackToProfile}
+                  className="text-sm font-medium text-[#FF6B35] hover:underline"
+                >
+                  ← Back to Profile
+                </button>
+                </div>
+
 
               {/* Delivery Address */}
               <div className="mb-6">
